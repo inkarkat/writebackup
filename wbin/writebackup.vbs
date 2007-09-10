@@ -11,45 +11,79 @@
 '        extension (format '.YYYYMMDD[a-z]') in the same directory as the file
 '        itself. The first backup file has letter 'a' appended, the next 'b',
 '        and so on. 
+'        Directories will be zipped (individually) into an archive file with
+'        date file extension. For example, a directory 'foo' will be backed up
+'        to 'foo.zip.20070911a'. This zip file will only contain the 'foo'
+'        directory at its top level; 'foo' itself will contain the entire
+'        subtree of the original 'foo' directory (including system and hidden
+'        files). 
 '
 '* REMARKS: 
 '       	
 '* REVISION	DATE		REMARKS 
 '	003	11-Sep-2007	Factored out functions getCurrentDate() and
 '				getBackupFilename(). 
+'				Added handling of directories with class
+'				ZipArchiver. 
+'				Factored out scattered MsgBox() calls; now,
+'				errors are raised and caught in the main
+'				function, which then prints the Err.Description
+'				via MsgBox(). 
 '	0.02	22-Sep-2006	Improved error message. 
 '	0.01	24-Jan-2003	file creation
 '*******************************************************************************
 '*FILE_SCCS = "@(#)writebackup.vbs	003	(11-Sep-2007)	tools";
 
+Dim ERROR_NO_MORE_FILENAMES : ERROR_NO_MORE_FILENAMES = vbObjectError + 1000
+Dim ERROR_NOT_EXISTING : ERROR_NOT_EXISTING = vbObjectError + 1001
+Dim ERROR_IN_ARCHIVER : ERROR_IN_ARCHIVER = vbObjectError + 1002
+
 '------------------------------------------------------------------------------
-Class ZipPacker
-    Public Function pack( dirspec )
-	Dim fso, packDirspec, packDirBasename, baseDirspec
+Class ZipArchiver
+    Public Sub archive( dirspec )
+	Dim fso, archiveDirspec, archiveDirBasename, baseDirspec
 	Set fso = CreateObject("Scripting.FileSystemObject")
-	packDirspec = fso.GetAbsolutePathName( fso.GetFolder( dirspec ) )
-	packDirBasename = fso.GetBaseName( packDirspec )
-	baseDirspec = fso.GetParentFolderName( packDirspec )
+	archiveDirspec = fso.GetAbsolutePathName( fso.GetFolder( dirspec ) )
+	archiveDirBasename = fso.GetBaseName( archiveDirspec )
+	baseDirspec = fso.GetParentFolderName( archiveDirspec )
 
-	Dim backupFilespec : backupFilespec = getBackupFilename( packDirspec & ".zip" )
-	If IsEmpty( backupFilespec ) Then
-	    pack = False
-	    Exit Function
-	End If
+	Dim backupFilespec : backupFilespec = getBackupFilename( archiveDirspec & ".zip" )
+	Const zipProgram = "zip"
+	Const zipArguments = "-9 -S -r"
+	' Highest compression, include system and hidden files, recurse into
+	' directories
 
-	WScript.Echo "packDirspec=" & packDirspec
-	WScript.Echo "packDirBasename=" & packDirBasename
-	WScript.Echo "baseDirspec=" & baseDirspec
-	WScript.Echo "backupFilespec=" & backupFilespec
+	Dim zipCommand : zipCommand = "cmd /C pushd " & Chr(34) & baseDirspec & Chr(34) & " && " & zipProgram & " " & zipArguments & " " & Chr(34) & backupFilespec & Chr(34) & " " & Chr(34) & archiveDirBasename & Chr(34)
+	' This will raise an error is the Windows shell cannot be found. (We do
+	' nothing about that.)
+	' If the zipProgram is not found, the shell will exit with return code
+	' 1. 
 
-	Dim zipCommand
-	zipCommand = "cmd /C pushd " & Chr(34) & baseDirspec & Chr(34) & " && xzip -9 -S -r " & Chr(34) & backupFilespec & Chr(34) & " " & Chr(34) & packDirBasename & "xx" & Chr(34)
-	WScript.Echo zipCommand
+	''''D WScript.Echo zipCommand
 
 	Dim WshShell : Set WshShell = CreateObject("WScript.Shell")
 	Dim returnCode : returnCode = WshShell.Run( zipCommand, 7, True )
-	WScript.Echo "returned " & returnCode
-    End Function
+	If returnCode <> 0 Then
+	    Dim reason
+	    On Error Resume Next    ' Here, the zipProgram is invoked directly, not through the shell. If the zipProgram isn't found, WshShell.Run() raises an error, which we have to catch. 
+	    If returnCode = 1 And WshShell.Run( zipProgram, 7, True ) <> 0 Then
+		reason = "The '" & zipProgram & "' program could not be found in the PATH. "
+	    Else
+		Select Case returnCode
+		    Case 10   reason = "zip encountered an error while using a temp file. "
+		    Case 11   reason = "read or seek error. "
+          	    Case 12   reason = "zip has nothing to do. "
+          	    Case 13   reason = "missing or empty zip file. "
+          	    Case 14   reason = "error writing to a file. "
+          	    Case 15   reason = "zip was unable to create a file to write to. "
+          	    Case 16   reason = "bad command line parameters. "
+          	    Case 18   reason = "zip could not open a specified file to read. "
+		    Case Else reason = "Unknown reason, error code " & returnCode
+		End Select
+	    End If
+	    Call Err.Raise( ERROR_IN_ARCHIVER, "ZipArchiver.archive", "Could not create archive: " & reason )
+	End If
+    End Sub
 End Class
 
 '------------------------------------------------------------------------------
@@ -92,12 +126,13 @@ Function getBackupFilename( filename )
 '* ASSUMPTIONS / PRECONDITIONS:
 '	? List of any external variable, control, or other element whose state affects this procedure.
 '* EFFECTS / POSTCONDITIONS:
-'	Pops up a MsgBox() if no more backup filenames are available. 
+'	
 '* INPUTS:
 '	filename    Filespec of the original file to be backed up. 
 '* RETURN VALUES: 
-'	Filespec of the backup file, or Empty if no more backup filenames are
-'	available. 
+'	Filespec of the backup file, or
+'	if no more backup filenames are available, raises error number
+'	ERROR_NO_MORE_FILENAMES and returns Empty. 
 '*******************************************************************************
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
@@ -114,14 +149,14 @@ Function getBackupFilename( filename )
 	    ' To increment, we need to convert letter to ASCII and back. 
 	    currentLetter = Chr( Asc(currentLetter) + 1 )
 	Else
-	    ''''D MsgBox filename & vbCrLf & backupFilename
+	    ''''D WScript.Echo filename & vbCrLf & backupFilename
 	    getBackupFilename = backupFilename
 	    Exit Function
 	End If
     Loop Until( currentLetter > "z" )
 
     ' All 26 possible backup slots (a..z) have already been taken. 
-    Call MsgBox( "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & ".", vbWarning, WScript.ScriptName )
+    Call Err.Raise( ERROR_NO_MORE_FILENAMES, "getBackupFilename", "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & ". " )
 End Function
 
 Sub writebackup( filename )
@@ -136,25 +171,25 @@ Sub writebackup( filename )
 '	filename: path and file name of file to be backuped. 
 '* RETURN VALUES: 
 '	none
+'	Raises ERROR_NOT_EXISTING if filename does not exist. 
 '*******************************************************************************
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
 
     ' Check precondition that file (or directory) exists; otherwise, the rest
     ' does not make sense. 
-    If( Not fso.FileExists( filename ) And Not fso.FolderExists( filename ) ) Then
-	Call MsgBox( "The file " & Chr(34) & filename & Chr(34) & " does not exist.", vbCritical, WScript.ScriptName ) 
-	Exit Sub
+    If Not fso.FileExists( filename ) And Not fso.FolderExists( filename ) Then
+	Call Err.Raise( ERROR_NOT_EXISTING, "writebackup", "The file " & Chr(34) & filename & Chr(34) & " does not exist." )
     End If
 
     Dim backupFilename
-    If( fso.FileExists( filename ) ) Then
+    If fso.FileExists( filename ) Then
 	backupFilename = getBackupFilename( filename )
 	If Not IsEmpty( backupFilename ) Then
 	    Call fso.CopyFile( filename, backupFilename )
 	End If
     Else
-	Call packer.pack( filename )
+	Call archiver.archive( filename )
     End If
 End Sub
 
@@ -179,11 +214,15 @@ If( objArgs.Count < 1 ) Then
     WScript.Quit 1
 End If
 
-Dim packer : Set packer = New ZipPacker
+Dim archiver : Set archiver = New ZipArchiver
 
 ' Process each passed filename
 Dim i
 For i = 0 to objArgs.Count - 1
+    On Error Resume Next
     Call writebackup( objArgs( i ) )
+    If Err Then
+	Call MsgBox( Err.Description, vbCritical, WScript.ScriptName )
+    End If
 Next
 
