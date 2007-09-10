@@ -1,43 +1,37 @@
-'/************************************************************************/^--**
+'/**************************************************************************HP**
 '**
 '* FILE: 	writebackup.vbs
 '* PRODUCT:	tools
-'* AUTHOR: 	Ingo Karkat <ingo@karkat.de>
-'* DATE CREATED:24-Jan-2003
+'* AUTHOR: 	/^--
+'* DATE CREATED:    24-Jan-2003
 '*
 '*******************************************************************************
 '* CONTENTS: 
-'   Write subsequent backups of passed file(s) with a current date file
-'   extension (format '.YYYYMMDD[a-z]') in the same directory as the file
-'   itself. The first backup of a day has letter 'a' appended, the next 'b', and
-'   so on. (Which means that a file can be backed up up to 26 times on any given
-'   day.)
+'        Write subsequent backups of the specified file(s) with date file
+'        extension (format '.YYYYMMDD[a-z]' in the same directory as the file
+'        itself. The first backup file has letter 'a' appended, the next 'b',
+'        and so on. 
 '
 '* REMARKS: 
-'
-' Copyright: (C) 2007 by Ingo Karkat
-'   This program is free software; you can redistribute it and/or modify it
-'   under the terms of the GNU General Public License.
-'   See http://www.gnu.org/copyleft/gpl.txt 
-'
+'       	
 '* REVISION	DATE		REMARKS 
-'   1.00.001	10-Mar-2007	Added copyright, prepared for publishing. 
+'	0.02	22-Sep-2006	Improved error message. 
 '	0.01	24-Jan-2003	file creation
 '*******************************************************************************
-'*FILE_SCCS = "@(#)writebackup.vbs	1.00.001	(10-Mar-2007)	tools";
+'*FILE_SCCS = "@(#)writebackup.vbs	0.02	(22-Sep-2006)	tools";
 
 Sub writebackup( filename )
 '*******************************************************************************
 '* PURPOSE:
-'    Create a backup of the passed file. 
+'	Create a backup of the passed file. 
 '* ASSUMPTIONS / PRECONDITIONS:
-'    passed file exists; otherwise, an error message is shown.
+'	passed file exists; otherwise, an error message is shown.
 '* EFFECTS / POSTCONDITIONS:
-'    Creates a backup copy of the passed file. 
+'	Creates a backup copy of the passed file. 
 '* INPUTS:
-'    filename: path and file name of file to be backuped. 
+'	filename: path and file name of file to be backuped. 
 '* RETURN VALUES: 
-'    none
+'	none
 '*******************************************************************************
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
@@ -82,22 +76,22 @@ Sub writebackup( filename )
     Loop Until( currentLetter > "z" )
 
     ' All 26 possible backup slots (a..z) have already been taken. 
-    Call MsgBox( "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & "!", vbWarning, WScript.ScriptName )
+    Call MsgBox( "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & ".", vbWarning, WScript.ScriptName )
 End Sub
 
 
 
 '*******************************************************************************
 '* PURPOSE:
-'    main routine; call the writebackup() function on each passed filename.
+'	main routine; call the writebackup() function on each passed filename.
 '* ASSUMPTIONS / PRECONDITIONS:
-'    ? List of any external variable, control, or other element whose state affects this procedure.
+'	? List of any external variable, control, or other element whose state affects this procedure.
 '* EFFECTS / POSTCONDITIONS:
-'    ? List of the procedure's effect on each external variable, control, or other element.
+'	? List of the procedure's effect on each external variable, control, or other element.
 '* INPUTS:
-'    argc, argv
+'	argc, argv
 '* RETURN VALUES: 
-'    none
+'	none
 '*******************************************************************************
 Dim objArgs
 
@@ -112,6 +106,6 @@ End If
 ' Process each passed filename
 Dim i
 For i = 0 to objArgs.Count - 1
-    Call writebackup( objArgs( i ) )
+	Call writebackup( objArgs( i ) )
 Next
 
