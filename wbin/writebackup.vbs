@@ -15,10 +15,82 @@
 '* REMARKS: 
 '       	
 '* REVISION	DATE		REMARKS 
+'	003	11-Sep-2007	Factored out functions getCurrentDate() and
+'				getBackupFilename(). 
 '	0.02	22-Sep-2006	Improved error message. 
 '	0.01	24-Jan-2003	file creation
 '*******************************************************************************
-'*FILE_SCCS = "@(#)writebackup.vbs	0.02	(22-Sep-2006)	tools";
+'*FILE_SCCS = "@(#)writebackup.vbs	003	(11-Sep-2007)	tools";
+
+Function getCurrentDate()
+'*******************************************************************************
+'* PURPOSE:
+'	Assemble current date in "yyyymmdd" format; unfortunately, there's no
+'	strftime() function, so we have to fill single-digit days and months with
+'	leading zero. 
+'* ASSUMPTIONS / PRECONDITIONS:
+'	none
+'* EFFECTS / POSTCONDITIONS:
+'	none
+'* INPUTS:
+'	none
+'* RETURN VALUES: 
+'	Current date. 
+'*******************************************************************************
+    Dim currentYear, currentMonth, currentDay
+    currentYear = Year( Date )
+    currentMonth = Month( Date ) 
+    If( Len(currentMonth) = 1 ) Then
+	currentMonth = "0" & currentMonth
+    End If
+    currentDay = Day( Date )
+    If( Len(currentDay) = 1 ) Then
+	currentDay = "0" & currentDay
+    End If
+
+    getCurrentDate = currentYear & currentMonth & currentDay
+End Function
+
+Function getBackupFilename( filename )
+'*******************************************************************************
+'* PURPOSE:
+'	Resolve the passed filename into the filename that will be used for the
+'	next backup. Path information is retained, the backup extension
+'	'YYYYMMDD(a-z)' will be appended. 
+'* ASSUMPTIONS / PRECONDITIONS:
+'	? List of any external variable, control, or other element whose state affects this procedure.
+'* EFFECTS / POSTCONDITIONS:
+'	Pops up a MsgBox() if no more backup filenames are available. 
+'* INPUTS:
+'	filename    Filespec of the original file to be backed up. 
+'* RETURN VALUES: 
+'	Filespec of the backup file, or Empty if no more backup filenames are
+'	available. 
+'*******************************************************************************
+    Dim fso
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    Dim currentDate, currentLetter
+    currentDate = getCurrentDate()
+    currentLetter = "a"
+
+    ' Perform backup copy with next available letter. 
+    Dim backupFilename
+    Do
+	backupFilename = filename & "." & currentDate & currentLetter
+	If( fso.FileExists( backupFilename ) ) Then
+	    ' To increment, we need to convert letter to ASCII and back. 
+	    currentLetter = Chr( Asc(currentLetter) + 1 )
+	Else
+	    ''''D MsgBox filename & vbCrLf & backupFilename
+	    getBackupFilename = backupFilename
+	    Exit Function
+	End If
+    Loop Until( currentLetter > "z" )
+
+    ' All 26 possible backup slots (a..z) have already been taken. 
+    Call MsgBox( "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & ".", vbWarning, WScript.ScriptName )
+End Function
 
 Sub writebackup( filename )
 '*******************************************************************************
@@ -43,40 +115,11 @@ Sub writebackup( filename )
 	Exit Sub
     End If
 
-    ' Assemble current date in "yyyymmdd" format; unfortunately, there's no
-    ' strftime() function, so we have to fill single-digit days and months with
-    ' leading zero. 
-    Dim currentYear, currentMonth, currentDay, currentDate, currentLetter
-    currentYear = Year( Date )
-    currentMonth = Month( Date ) 
-    If( Len(currentMonth) = 1 ) Then
-	currentMonth = "0" & currentMonth
-    End If
-    currentDay = Day( Date )
-    If( Len(currentDay) = 1 ) Then
-	currentDay = "0" & currentDay
-    End If
-
-    currentDate = currentYear & currentMonth & currentDay
-    currentLetter = "a"
-
-    ' Perform backup copy with next available letter. 
     Dim backupFilename
-    Do
-	backupFilename = filename & "." & currentDate & currentLetter
-	If( fso.FileExists( backupFilename ) ) Then
-	    ' To increment, we need to convert letter to ASCII and back. 
-	    currentLetter = Chr( Asc(currentLetter) + 1 )
-	Else
-	    ''''D MsgBox filename & vbCrLf & backupFilename
-	    Call fso.CopyFile( filename, backupFilename )
-	    Exit Sub
-	End If
-	
-    Loop Until( currentLetter > "z" )
-
-    ' All 26 possible backup slots (a..z) have already been taken. 
-    Call MsgBox( "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & ".", vbWarning, WScript.ScriptName )
+    backupFilename = getBackupFilename( filename )
+    If Not IsEmpty( backupFilename ) Then
+	Call fso.CopyFile( filename, backupFilename )
+    End If
 End Sub
 
 
@@ -106,6 +149,6 @@ End If
 ' Process each passed filename
 Dim i
 For i = 0 to objArgs.Count - 1
-	Call writebackup( objArgs( i ) )
+    Call writebackup( objArgs( i ) )
 Next
 
