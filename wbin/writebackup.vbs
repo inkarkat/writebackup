@@ -8,7 +8,7 @@
 '*******************************************************************************
 '* CONTENTS: 
 '        Write subsequent backups of the specified file(s) with date file
-'        extension (format '.YYYYMMDD[a-z]' in the same directory as the file
+'        extension (format '.YYYYMMDD[a-z]') in the same directory as the file
 '        itself. The first backup file has letter 'a' appended, the next 'b',
 '        and so on. 
 '
@@ -21,6 +21,38 @@
 '	0.01	24-Jan-2003	file creation
 '*******************************************************************************
 '*FILE_SCCS = "@(#)writebackup.vbs	003	(11-Sep-2007)	tools";
+
+'------------------------------------------------------------------------------
+Class ZipPacker
+    Public Function pack( dirspec )
+	Dim fso, packDirspec, packDirBasename, baseDirspec
+	Set fso = CreateObject("Scripting.FileSystemObject")
+	packDirspec = fso.GetAbsolutePathName( fso.GetFolder( dirspec ) )
+	packDirBasename = fso.GetBaseName( packDirspec )
+	baseDirspec = fso.GetParentFolderName( packDirspec )
+
+	Dim backupFilespec : backupFilespec = getBackupFilename( packDirspec & ".zip" )
+	If IsEmpty( backupFilespec ) Then
+	    pack = False
+	    Exit Function
+	End If
+
+	WScript.Echo "packDirspec=" & packDirspec
+	WScript.Echo "packDirBasename=" & packDirBasename
+	WScript.Echo "baseDirspec=" & baseDirspec
+	WScript.Echo "backupFilespec=" & backupFilespec
+
+	Dim zipCommand
+	zipCommand = "cmd /C pushd " & Chr(34) & baseDirspec & Chr(34) & " && xzip -9 -S -r " & Chr(34) & backupFilespec & Chr(34) & " " & Chr(34) & packDirBasename & "xx" & Chr(34)
+	WScript.Echo zipCommand
+
+	Dim WshShell : Set WshShell = CreateObject("WScript.Shell")
+	Dim returnCode : returnCode = WshShell.Run( zipCommand, 7, True )
+	WScript.Echo "returned " & returnCode
+    End Function
+End Class
+
+'------------------------------------------------------------------------------
 
 Function getCurrentDate()
 '*******************************************************************************
@@ -108,17 +140,21 @@ Sub writebackup( filename )
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
 
-    ' Check precondition that file exists; otherwise, the rest does not make
-    ' sense. 
-    If( Not fso.FileExists( filename ) ) Then
+    ' Check precondition that file (or directory) exists; otherwise, the rest
+    ' does not make sense. 
+    If( Not fso.FileExists( filename ) And Not fso.FolderExists( filename ) ) Then
 	Call MsgBox( "The file " & Chr(34) & filename & Chr(34) & " does not exist.", vbCritical, WScript.ScriptName ) 
 	Exit Sub
     End If
 
     Dim backupFilename
-    backupFilename = getBackupFilename( filename )
-    If Not IsEmpty( backupFilename ) Then
-	Call fso.CopyFile( filename, backupFilename )
+    If( fso.FileExists( filename ) ) Then
+	backupFilename = getBackupFilename( filename )
+	If Not IsEmpty( backupFilename ) Then
+	    Call fso.CopyFile( filename, backupFilename )
+	End If
+    Else
+	Call packer.pack( filename )
     End If
 End Sub
 
@@ -136,15 +172,14 @@ End Sub
 '* RETURN VALUES: 
 '	none
 '*******************************************************************************
-Dim objArgs
-
-Set objArgs = WScript.Arguments
-
+Dim objArgs : Set objArgs = WScript.Arguments
 If( objArgs.Count < 1 ) Then
     WScript.Echo( "writebackup: write backup of passed files with date file extension. " )
     WScript.Echo( "Syntax: " & WScript.ScriptName & " <filename> [,...]" )
     WScript.Quit 1
 End If
+
+Dim packer : Set packer = New ZipPacker
 
 ' Process each passed filename
 Dim i
