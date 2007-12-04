@@ -56,6 +56,7 @@ getBackupFilename()
     done
 
     # All backup letters a-z are already used; do not return a backup filename. 
+    print -R >&2 "Ran out of backup file names for file \"${file}\"!"
     return 1
 }
 
@@ -76,7 +77,6 @@ writebackup()
 	print -R "Backed up to `basename "${backupfilename}"`"
 	return 0
     else
-	print -R >&2 "Ran out of backup file names for file \"${file}\"!"
 	return 1
     fi
 }
