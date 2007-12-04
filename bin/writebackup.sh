@@ -29,12 +29,37 @@
 ###############################################################################
 #FILE_SCCS = "@(#)writebackup.sh	1.00.001	(10-Mar-2007)	tools";
 
+archiveProgram="zip -9 -r"
+archiveExtension=".zip"
+
+archiveAndBackup()
+{
+    typeset dirspec=${1%/}
+
+    typeset archiveDirBasename=$(basename -- "${dirspec}")
+    typeset baseDirspec=$(dirname -- "${dirspec}")
+    typeset backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")
+    [ ! "${backupFilespec}" ] && return 1
+
+    print -R "Archiving ${dirspec}..."
+    typeset savedCwd=$(pwd)
+    cd "${baseDirspec}" && eval "${archiveProgram}" "${backupFilespec}" "${archiveDirBasename}/" # > /dev/null
+    if [ $? -eq 0 ]
+    then
+	print -R "Backed up to $(basename -- "${backupFilespec}")"
+    else
+	print -R >&2 "Could not create archive! "
+    fi
+
+    cd "${savedCwd}"
+}
+
 getBackupFilename()
 {
-    typeset file=$1
+    typeset filespec=$1
 
     # Determine backup file name. 
-    typeset timestamp=`date +%Y%m%d`
+    typeset timestamp=$(date +%Y%m%d)
 
     typeset number=97   # letter 'a'
     while [ $number -le 122 ] # until letter 'z'
@@ -42,41 +67,55 @@ getBackupFilename()
 	# Because the shell cannot increase characters, only add with numbers, we 
 	# loop over the ASCII value of the backup letter, then use the desktop 
 	# calculator to convert this into the corresponding character. 
-	typeset numberchar=`echo ${number}P|dc`
-	typeset backupfilename="${file}.${timestamp}${numberchar}"
-	if [ -a "${backupfilename}" ]
+	typeset numberchar=$(echo ${number}P|dc)
+	typeset backupFilespec="${filespec}.${timestamp}${numberchar}"
+	if [ -a "${backupFilespec}" ]
 	then
 	    # Current backup letter already exists, try next one. 
 	    let number=number+1
 	    continue
 	fi
 	# Found unused backup letter. 
-	print -R "${backupfilename}"
+	print -R "${backupFilespec}"
 	return 0
     done
 
     # All backup letters a-z are already used; do not return a backup filename. 
-    print -R >&2 "Ran out of backup file names for file \"${file}\"!"
+    print -R >&2 "Ran out of backup file names for file \"${filespec}\"!"
     return 1
 }
 
 writebackup()
 {
-    typeset file=$1
-    # Check preconditions. 
-    if [ ! -r "${file}" -o ! -f "${file}" ]
-    then
-	print -R >&2 "Error: \"${file}\" is no file or not readable!" 
-	return 1
-    fi
+    typeset spec=$1
 
-    typeset backupfilename=$(getBackupFilename "$file")
-    if [ "${backupfilename}" ]
+    if [ -f "${spec}" ]
     then
-	cp "${file}" "${backupfilename}"
-	print -R "Backed up to `basename "${backupfilename}"`"
-	return 0
+	if [ ! -r "${spec}" ]
+	then
+	    print -R >&2 "Error: \"${spec}\" is not readable!" 
+	    return 1
+	fi
+
+	typeset backupFilespec=$(getBackupFilename "${spec}")
+	if [ "${backupFilespec}" ]
+	then
+	    cp "${spec}" "${backupFilespec}"
+	    print -R "Backed up to $(basename -- "${backupFilespec}")"
+	    return 0
+	else
+	    return 1
+	fi
+    elif [ -d "${spec}" ]
+    then
+	if [ ! -r "${spec}" -o ! -x "${spec}" ]
+	then
+	    print -R >&2 "Error: \"${spec}\" is not accessible!" 
+	    return 1
+	fi
+	archiveAndBackup "${spec}" || return 1
     else
+	print -R >&2 "Error: \"${spec}\" does not exist!" 
 	return 1
     fi
 }
