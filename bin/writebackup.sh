@@ -13,6 +13,14 @@
 #   itself. The first backup of a day has letter 'a' appended, the next 'b', and
 #   so on. (Which means that a file can be backed up up to 26 times on any given
 #   day.)
+#   Directories will be zipped (individually) into an archive file with date
+#   file extension. For example, a directory 'foo' will be backed up to
+#   'foo.zip.20070911a'. This zip file will only contain the 'foo' directory at
+#   its top level; 'foo' itself will contain the entire subtree of the original
+#   'foo' directory. 
+#   The archiver can be changed; e.g. you could use 'tar' instead of 'zip' by
+#   specifying
+#	--archive-program "tar cvf" --archive-extension .tar
 #	
 # REMARKS: 
 #	
@@ -22,12 +30,14 @@
 #   See http://www.gnu.org/copyleft/gpl.txt 
 #
 # REVISION	DATE		REMARKS 
+#   1.10.002	05-Dec-2007	Factored out function getBackupFilename(). 
+#				Added handling of directories. 
 #   1.00.001	10-Mar-2007	Added copyright, prepared for publishing. 
 #	0.02	22-Sep-2006	Cleaned up code, renamed to 'writebackup.sh', 
 #				added ability to pass in more than one file. 
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
-#FILE_SCCS = "@(#)writebackup.sh	1.00.001	(10-Mar-2007)	tools";
+#FILE_SCCS = "@(#)writebackup.sh	1.10.002	(05-Dec-2007)	tools";
 
 archiveProgram="zip -9 -r"
 archiveExtension=".zip"
@@ -47,14 +57,30 @@ archiveAndBackup()
     if [ $? -eq 0 ]
     then
 	print -R "Backed up to $(basename -- "${backupFilespec}")"
+	cd "${savedCwd}" && return 0 || return 1
     else
 	print -R >&2 "Could not create archive! "
+	cd "${savedCwd}"
+	return 1
     fi
-
-    cd "${savedCwd}"
 }
 
 getBackupFilename()
+###############################################################################
+# PURPOSE:
+#   Resolve the passed filename into the filename that will be used for the next
+#   backup. Path information is retained, the backup extension 'YYYYMMDD(a-z)'
+#   will be appended. 
+# ASSUMPTIONS / PRECONDITIONS:
+#   ? List of any external variable, control, or other element whose state affects this procedure.
+# EFFECTS / POSTCONDITIONS:
+#   Prints error message to stderr. 
+# INPUTS:
+#   filespec    Filespec of the original file to be backed up. 
+# RETURN VALUES:
+#   Filespec of the backup file, or nothing if no more backup filenames are
+#   available. 
+###############################################################################
 {
     typeset filespec=$1
 
@@ -86,6 +112,18 @@ getBackupFilename()
 }
 
 writebackup()
+###############################################################################
+# PURPOSE:
+#   Create a backup of the passed file or directory. 
+# ASSUMPTIONS / PRECONDITIONS:
+#   Passed file or directory exists; otherwise, an error message is printed. 
+# EFFECTS / POSTCONDITIONS:
+#   Creates a backup copy of the passed file or directory. 
+# INPUTS:
+#   spec    path and name
+# RETURN VALUES:
+#   
+###############################################################################
 {
     typeset spec=$1
 
@@ -122,13 +160,15 @@ writebackup()
 
 printUsage()
 {
-    echo >&2 "Usage: \"$(basename "$1")\" file [,...] [--help|-h|-?]"
+    echo >&2 "Usage: \"$(basename "$1")\" [--archive-program \"zip -9 -r\" --archive-extension .zip] file [,...] [--help|-h|-?]"
 }
 
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printUsage "$0"; exit 1;;
+	--archive-program)	shift; archiveProgram=$1; shift;;
+	--archive-extension)	shift; archiveExtension=$1; shift;;
 	--)		shift; break;;
 	*)		break;;
     esac
