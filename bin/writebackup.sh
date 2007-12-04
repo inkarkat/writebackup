@@ -1,25 +1,33 @@
 #!/bin/ksh
-###########################################################################HP##
+#########################################################################/^--##
 ##
 # FILE: 	writebackup.sh
 # PRODUCT:	tools
-# AUTHOR: 	/^--
+# AUTHOR: 	Ingo Karkat <ingo@karkat.de>
 # DATE CREATED:	10-Jul-2003
 #
 ###############################################################################
 # CONTENTS: 
-# Write subsequent backups of passed file(s) with date file extension (format
-# '.YYYYMMDD[a-z]' in the same directory as the file itself. The first backup
-# file has letter 'a' appended, the next 'b', and so on. 
+#   Write subsequent backups of passed file(s) with a current date file
+#   extension (format '.YYYYMMDD[a-z]') in the same directory as the file
+#   itself. The first backup of a day has letter 'a' appended, the next 'b', and
+#   so on. (Which means that a file can be backed up up to 26 times on any given
+#   day.)
 #	
 # REMARKS: 
 #	
+# Copyright: (C) 2007 by Ingo Karkat
+#   This program is free software; you can redistribute it and/or modify it
+#   under the terms of the GNU General Public License.
+#   See http://www.gnu.org/copyleft/gpl.txt 
+#
 # REVISION	DATE		REMARKS 
+#   1.00.001	10-Mar-2007	Added copyright, prepared for publishing. 
 #	0.02	22-Sep-2006	Cleaned up code, renamed to 'writebackup.sh', 
 #				added ability to pass in more than one file. 
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
-#FILE_SCCS = "@(#)writebackup.sh	0.02	(22-Sep-2006)	tools";
+#FILE_SCCS = "@(#)writebackup.sh	1.00.001	(10-Mar-2007)	tools";
 
 writebackup()
 {
