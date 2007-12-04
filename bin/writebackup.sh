@@ -29,17 +29,11 @@
 ###############################################################################
 #FILE_SCCS = "@(#)writebackup.sh	1.00.001	(10-Mar-2007)	tools";
 
-writebackup()
+getBackupFilename()
 {
     typeset file=$1
-    # Check preconditions. 
-    if [ ! -r "${file}" -o ! -f "${file}" ]
-    then
-	print -R >&2 "Error: \"${file}\" is no file or not readable!" 
-	return 1
-    fi
 
-    # Determine backup file name and do backup. 
+    # Determine backup file name. 
     typeset timestamp=`date +%Y%m%d`
 
     typeset number=97   # letter 'a'
@@ -56,14 +50,35 @@ writebackup()
 	    let number=number+1
 	    continue
 	fi
-	# Found unused backup letter; write backup and return. 
-	cp "${file}" "${backupfilename}"
-	print -R "Backed up to `basename "${backupfilename}"`"
+	# Found unused backup letter. 
+	print -R "${backupfilename}"
 	return 0
     done
 
-    # All backup letters a-z are already used; report error. 
-    print -R >&2 "Ran out of backup file names for file \"${file}\"!"
+    # All backup letters a-z are already used; do not return a backup filename. 
+    return 1
+}
+
+writebackup()
+{
+    typeset file=$1
+    # Check preconditions. 
+    if [ ! -r "${file}" -o ! -f "${file}" ]
+    then
+	print -R >&2 "Error: \"${file}\" is no file or not readable!" 
+	return 1
+    fi
+
+    typeset backupfilename=$(getBackupFilename "$file")
+    if [ "${backupfilename}" ]
+    then
+	cp "${file}" "${backupfilename}"
+	print -R "Backed up to `basename "${backupfilename}"`"
+	return 0
+    else
+	print -R >&2 "Ran out of backup file names for file \"${file}\"!"
+	return 1
+    fi
 }
 
 printUsage()
