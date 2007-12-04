@@ -1,27 +1,37 @@
-'/**************************************************************************HP**
+'/************************************************************************/^--**
 '**
 '* FILE: 	writebackup.vbs
 '* PRODUCT:	tools
-'* AUTHOR: 	/^--
-'* DATE CREATED:    24-Jan-2003
+'* AUTHOR: 	Ingo Karkat <ingo@karkat.de>
+'* DATE CREATED:24-Jan-2003
 '*
 '*******************************************************************************
 '* CONTENTS: 
-'        Write subsequent backups of the specified file(s) with date file
-'        extension (format '.YYYYMMDD[a-z]') in the same directory as the file
-'        itself. The first backup file has letter 'a' appended, the next 'b',
-'        and so on. 
-'        Directories will be zipped (individually) into an archive file with
-'        date file extension. For example, a directory 'foo' will be backed up
-'        to 'foo.zip.20070911a'. This zip file will only contain the 'foo'
-'        directory at its top level; 'foo' itself will contain the entire
-'        subtree of the original 'foo' directory (including system and hidden
-'        files). 
+'   Write subsequent backups of passed file(s) with a current date file
+'   extension (format '.YYYYMMDD[a-z]') in the same directory as the file
+'   itself. The first backup of a day has letter 'a' appended, the next 'b', and
+'   so on. (Which means that a file can be backed up up to 26 times on any given
+'   day.)
+'   Directories will be zipped (individually) into an archive file with date
+'   file extension. For example, a directory 'foo' will be backed up to
+'   'foo.zip.20070911a'. This zip file will only contain the 'foo' directory at
+'   its top level; 'foo' itself will contain the entire subtree of the original
+'   'foo' directory (including system and hidden files). 
 '
+'* DEPENDENCIES: 
+'   Requires the 'zip.exe' command-line utility if you want to backup
+'   directories. This utility is part of the Win32 port of the GNU Unix
+'   utilities and can be downloaded from http://unxutils.sourceforge.net/
+'   
 '* REMARKS: 
-'       	
+'
+' Copyright: (C) 2007 by Ingo Karkat
+'   This program is free software; you can redistribute it and/or modify it
+'   under the terms of the GNU General Public License.
+'   See http://www.gnu.org/copyleft/gpl.txt 
+'
 '* REVISION	DATE		REMARKS 
-'	003	11-Sep-2007	Factored out functions getCurrentDate() and
+'   1.10.003	11-Sep-2007	Factored out functions getCurrentDate() and
 '				getBackupFilename(). 
 '				Added handling of directories with class
 '				ZipArchiver. 
@@ -29,10 +39,11 @@
 '				errors are raised and caught in the main
 '				function, which then prints the Err.Description
 '				via MsgBox(). 
+'   1.00.001	10-Mar-2007	Added copyright, prepared for publishing. 
 '	0.02	22-Sep-2006	Improved error message. 
 '	0.01	24-Jan-2003	file creation
 '*******************************************************************************
-'*FILE_SCCS = "@(#)writebackup.vbs	003	(11-Sep-2007)	tools";
+'*FILE_SCCS = "@(#)writebackup.vbs	1.10.003	(11-Sep-2007)	tools";
 
 Dim ERROR_NO_MORE_FILENAMES : ERROR_NO_MORE_FILENAMES = vbObjectError + 1000
 Dim ERROR_NOT_EXISTING : ERROR_NOT_EXISTING = vbObjectError + 1001
@@ -72,12 +83,12 @@ Class ZipArchiver
 		Select Case returnCode
 		    Case 10   reason = "zip encountered an error while using a temp file. "
 		    Case 11   reason = "read or seek error. "
-          	    Case 12   reason = "zip has nothing to do. "
-          	    Case 13   reason = "missing or empty zip file. "
-          	    Case 14   reason = "error writing to a file. "
-          	    Case 15   reason = "zip was unable to create a file to write to. "
-          	    Case 16   reason = "bad command line parameters. "
-          	    Case 18   reason = "zip could not open a specified file to read. "
+		    Case 12   reason = "zip has nothing to do. "
+		    Case 13   reason = "missing or empty zip file. "
+		    Case 14   reason = "error writing to a file. "
+		    Case 15   reason = "zip was unable to create a file to write to. "
+		    Case 16   reason = "bad command line parameters. "
+		    Case 18   reason = "zip could not open a specified file to read. "
 		    Case Else reason = "Unknown reason, error code " & returnCode
 		End Select
 	    End If
@@ -91,17 +102,17 @@ End Class
 Function getCurrentDate()
 '*******************************************************************************
 '* PURPOSE:
-'	Assemble current date in "yyyymmdd" format; unfortunately, there's no
-'	strftime() function, so we have to fill single-digit days and months with
-'	leading zero. 
+'   Assemble current date in "yyyymmdd" format; unfortunately, there's no
+'   strftime() function, so we have to fill single-digit days and months with
+'   leading zero. 
 '* ASSUMPTIONS / PRECONDITIONS:
-'	none
+'   none
 '* EFFECTS / POSTCONDITIONS:
-'	none
+'   none
 '* INPUTS:
-'	none
+'   none
 '* RETURN VALUES: 
-'	Current date. 
+'   Current date. 
 '*******************************************************************************
     Dim currentYear, currentMonth, currentDay
     currentYear = Year( Date )
@@ -120,19 +131,19 @@ End Function
 Function getBackupFilename( filename )
 '*******************************************************************************
 '* PURPOSE:
-'	Resolve the passed filename into the filename that will be used for the
-'	next backup. Path information is retained, the backup extension
-'	'YYYYMMDD(a-z)' will be appended. 
+'   Resolve the passed filename into the filename that will be used for the next
+'   backup. Path information is retained, the backup extension 'YYYYMMDD(a-z)'
+'   will be appended. 
 '* ASSUMPTIONS / PRECONDITIONS:
-'	? List of any external variable, control, or other element whose state affects this procedure.
+'   ? List of any external variable, control, or other element whose state affects this procedure.
 '* EFFECTS / POSTCONDITIONS:
-'	
+'
 '* INPUTS:
-'	filename    Filespec of the original file to be backed up. 
+'   filename    Filespec of the original file to be backed up. 
 '* RETURN VALUES: 
-'	Filespec of the backup file, or
-'	if no more backup filenames are available, raises error number
-'	ERROR_NO_MORE_FILENAMES and returns Empty. 
+'   Filespec of the backup file, or
+'   if no more backup filenames are available, raises error number
+'   ERROR_NO_MORE_FILENAMES and returns Empty. 
 '*******************************************************************************
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
@@ -156,22 +167,22 @@ Function getBackupFilename( filename )
     Loop Until( currentLetter > "z" )
 
     ' All 26 possible backup slots (a..z) have already been taken. 
-    Call Err.Raise( ERROR_NO_MORE_FILENAMES, "getBackupFilename", "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & ". " )
+    Call Err.Raise( ERROR_NO_MORE_FILENAMES, "getBackupFilename", "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & "! " )
 End Function
 
 Sub writebackup( filename )
 '*******************************************************************************
 '* PURPOSE:
-'	Create a backup of the passed file. 
+'   Create a backup of the passed file. 
 '* ASSUMPTIONS / PRECONDITIONS:
-'	passed file exists; otherwise, an error message is shown.
+'   passed file exists; otherwise, an error message is shown.
 '* EFFECTS / POSTCONDITIONS:
-'	Creates a backup copy of the passed file. 
+'   Creates a backup copy of the passed file. 
 '* INPUTS:
-'	filename: path and file name of file to be backuped. 
+'   filename: path and file name of file to be backuped. 
 '* RETURN VALUES: 
-'	none
-'	Raises ERROR_NOT_EXISTING if filename does not exist. 
+'   none
+'   Raises ERROR_NOT_EXISTING if filename does not exist. 
 '*******************************************************************************
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
@@ -197,15 +208,15 @@ End Sub
 
 '*******************************************************************************
 '* PURPOSE:
-'	main routine; call the writebackup() function on each passed filename.
+'   main routine; call the writebackup() function on each passed filename.
 '* ASSUMPTIONS / PRECONDITIONS:
-'	? List of any external variable, control, or other element whose state affects this procedure.
+'   ? List of any external variable, control, or other element whose state affects this procedure.
 '* EFFECTS / POSTCONDITIONS:
-'	? List of the procedure's effect on each external variable, control, or other element.
+'   ? List of the procedure's effect on each external variable, control, or other element.
 '* INPUTS:
-'	argc, argv
+'   argc, argv
 '* RETURN VALUES: 
-'	none
+'   none
 '*******************************************************************************
 Dim objArgs : Set objArgs = WScript.Arguments
 If( objArgs.Count < 1 ) Then
