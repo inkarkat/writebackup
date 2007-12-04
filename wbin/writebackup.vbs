@@ -31,6 +31,7 @@
 '   See http://www.gnu.org/copyleft/gpl.txt 
 '
 '* REVISION	DATE		REMARKS 
+'   1.10.004	05-Dec-2007	Corrected comments and variable name. 
 '   1.10.003	11-Sep-2007	Factored out functions getCurrentDate() and
 '				getBackupFilename(). 
 '				Added handling of directories with class
@@ -43,7 +44,7 @@
 '	0.02	22-Sep-2006	Improved error message. 
 '	0.01	24-Jan-2003	file creation
 '*******************************************************************************
-'*FILE_SCCS = "@(#)writebackup.vbs	1.10.003	(11-Sep-2007)	tools";
+'*FILE_SCCS = "@(#)writebackup.vbs	1.10.004	(05-Dec-2007)	tools";
 
 Dim ERROR_NO_MORE_FILENAMES : ERROR_NO_MORE_FILENAMES = vbObjectError + 1000
 Dim ERROR_NOT_EXISTING : ERROR_NOT_EXISTING = vbObjectError + 1001
@@ -65,7 +66,7 @@ Class ZipArchiver
 	' directories
 
 	Dim zipCommand : zipCommand = "cmd /C pushd " & Chr(34) & baseDirspec & Chr(34) & " && " & zipProgram & " " & zipArguments & " " & Chr(34) & backupFilespec & Chr(34) & " " & Chr(34) & archiveDirBasename & Chr(34)
-	' This will raise an error is the Windows shell cannot be found. (We do
+	' This will raise an error if the Windows shell cannot be found. (We do
 	' nothing about that.)
 	' If the zipProgram is not found, the shell will exit with return code
 	' 1. 
@@ -170,37 +171,37 @@ Function getBackupFilename( filename )
     Call Err.Raise( ERROR_NO_MORE_FILENAMES, "getBackupFilename", "Ran out of backup file names for file " & Chr(34) & filename & Chr(34) & "! " )
 End Function
 
-Sub writebackup( filename )
+Sub writebackup( spec )
 '*******************************************************************************
 '* PURPOSE:
-'   Create a backup of the passed file. 
+'   Create a backup of the passed file or directory. 
 '* ASSUMPTIONS / PRECONDITIONS:
-'   passed file exists; otherwise, an error message is shown.
+'   passed file or directory exists; otherwise, an error message is shown.
 '* EFFECTS / POSTCONDITIONS:
-'   Creates a backup copy of the passed file. 
+'   Creates a backup copy of the passed file or directory. 
 '* INPUTS:
-'   filename: path and file name of file to be backuped. 
+'   spec: path and name
 '* RETURN VALUES: 
 '   none
-'   Raises ERROR_NOT_EXISTING if filename does not exist. 
+'   Raises ERROR_NOT_EXISTING if the file or directory does not exist. 
 '*******************************************************************************
     Dim fso
     Set fso = CreateObject("Scripting.FileSystemObject")
 
     ' Check precondition that file (or directory) exists; otherwise, the rest
     ' does not make sense. 
-    If Not fso.FileExists( filename ) And Not fso.FolderExists( filename ) Then
-	Call Err.Raise( ERROR_NOT_EXISTING, "writebackup", "The file " & Chr(34) & filename & Chr(34) & " does not exist." )
+    If Not fso.FileExists( spec ) And Not fso.FolderExists( spec ) Then
+	Call Err.Raise( ERROR_NOT_EXISTING, "writebackup", "The file " & Chr(34) & spec & Chr(34) & " does not exist." )
     End If
 
     Dim backupFilename
-    If fso.FileExists( filename ) Then
-	backupFilename = getBackupFilename( filename )
+    If fso.FileExists( spec ) Then
+	backupFilename = getBackupFilename( spec )
 	If Not IsEmpty( backupFilename ) Then
-	    Call fso.CopyFile( filename, backupFilename )
+	    Call fso.CopyFile( spec, backupFilename )
 	End If
     Else
-	Call archiver.archive( filename )
+	Call archiver.archive( spec )
     End If
 End Sub
 
@@ -208,7 +209,8 @@ End Sub
 
 '*******************************************************************************
 '* PURPOSE:
-'   main routine; call the writebackup() function on each passed filename.
+'   main routine; call the writebackup() function on each passed file or
+'   directory.
 '* ASSUMPTIONS / PRECONDITIONS:
 '   ? List of any external variable, control, or other element whose state affects this procedure.
 '* EFFECTS / POSTCONDITIONS:
