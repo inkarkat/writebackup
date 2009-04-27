@@ -1,4 +1,4 @@
-#!/bin/ksh
+#!/bin/bash
 #########################################################################/^--##
 ##
 # FILE: 	writebackup.sh
@@ -29,12 +29,13 @@
 #
 # REMARKS: 
 #	
-# Copyright: (C) 2007 by Ingo Karkat
+# Copyright: (C) 2007-2009 by Ingo Karkat
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License.
 #   See http://www.gnu.org/copyleft/gpl.txt 
 #
 # REVISION	DATE		REMARKS 
+#   1.10.003	28-Apr-2009	Converted from Korn shell to Bash script. 
 #   1.10.002	05-Dec-2007	Factored out function getBackupFilename(). 
 #				Added handling of directories. 
 #   1.00.001	10-Mar-2007	Added copyright, prepared for publishing. 
@@ -42,29 +43,30 @@
 #				added ability to pass in more than one file. 
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
-#FILE_SCCS = "@(#)writebackup.sh	1.10.002	(05-Dec-2007)	tools";
+#FILE_SCCS = "@(#)writebackup.sh	1.10.003	(28-Apr-2009)	tools";
 
-archiveProgram="zip -9 -r"
-archiveExtension=".zip"
+shopt -qu xpg_echo
+
+archiveProgram='zip -9 -r'
+archiveExtension='.zip'
 
 archiveAndBackup()
 {
-    typeset dirspec=${1%/}
+    local -r dirspec=${1%/}
 
-    typeset archiveDirBasename=$(basename -- "${dirspec}")
-    typeset baseDirspec=$(dirname -- "${dirspec}")
-    typeset backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")
+    local -r archiveDirBasename=$(basename -- "${dirspec}")
+    local -r baseDirspec=$(dirname -- "${dirspec}")
+    local -r backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")
     [ ! "${backupFilespec}" ] && return 1
 
-    print -R "Archiving ${dirspec}..."
-    typeset savedCwd=$(pwd)
+    echo "Archiving ${dirspec}..."
+    local -r savedCwd=$(pwd)
     cd "${baseDirspec}" && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
-    if [ $? -eq 0 ]
-    then
-	print -R "Backed up to $(basename -- "${backupFilespec}")"
+    if [ $? -eq 0 ]; then
+	echo "Backed up to $(basename -- "${backupFilespec}")"
 	cd "${savedCwd}" && return 0 || return 1
     else
-	print -R >&2 "Could not create archive! "
+	echo >&2 "Could not create archive! "
 	cd "${savedCwd}"
 	return 1
     fi
@@ -88,32 +90,29 @@ getBackupFilename()
 #   0 on success, 1 on failure
 ###############################################################################
 {
-    typeset filespec=$1
+    local -r filespec=$1
 
     # Determine backup file name. 
-    typeset timestamp=$(date +%Y%m%d)
-
-    typeset number=97   # letter 'a'
+    local number=97   # letter 'a'
     while [ $number -le 122 ] # until letter 'z'
     do
 	# Because the shell cannot increase characters, only add with numbers, we 
 	# loop over the ASCII value of the backup letter, then use the desktop 
 	# calculator to convert this into the corresponding character. 
-	typeset numberchar=$(echo ${number}P|dc)
-	typeset backupFilespec="${filespec}.${timestamp}${numberchar}"
-	if [ -a "${backupFilespec}" ]
-	then
+	local numberchar=$(echo ${number}P|dc)
+	local backupFilespec="${filespec}.${timestamp}${numberchar}"
+	if [ -a "${backupFilespec}" ]; then
 	    # Current backup letter already exists, try next one. 
-	    let number=number+1
+	    let number+=1
 	    continue
 	fi
 	# Found unused backup letter. 
-	print -R "${backupFilespec}"
+	echo "${backupFilespec}"
 	return 0
     done
 
     # All backup letters a-z are already used; do not return a backup filename. 
-    print -R >&2 "Ran out of backup file names for file \"${filespec}\"!"
+    echo >&2 "Ran out of backup file names for file \"${filespec}\"!"
     return 1
 }
 
@@ -131,35 +130,30 @@ writebackup()
 #   0 on success, 1 on failure
 ###############################################################################
 {
-    typeset spec=$1
+    local -r spec=$1
 
-    if [ -f "${spec}" ]
-    then
-	if [ ! -r "${spec}" ]
-	then
-	    print -R >&2 "Error: \"${spec}\" is not readable!" 
+    if [ -f "${spec}" ]; then
+	if [ ! -r "${spec}" ]; then
+	    echo >&2 "Error: \"${spec}\" is not readable!" 
 	    return 1
 	fi
 
-	typeset backupFilespec=$(getBackupFilename "${spec}")
-	if [ "${backupFilespec}" ]
-	then
+	local -r backupFilespec=$(getBackupFilename "${spec}")
+	if [ "${backupFilespec}" ]; then
 	    cp "${spec}" "${backupFilespec}"
-	    print -R "Backed up to $(basename -- "${backupFilespec}")"
+	    echo "Backed up to $(basename -- "${backupFilespec}")"
 	    return 0
 	else
 	    return 1
 	fi
-    elif [ -d "${spec}" ]
-    then
-	if [ ! -r "${spec}" -o ! -x "${spec}" ]
-	then
-	    print -R >&2 "Error: \"${spec}\" is not accessible!" 
+    elif [ -d "${spec}" ]; then
+	if [ ! -r "${spec}" -o ! -x "${spec}" ]; then
+	    echo >&2 "Error: \"${spec}\" is not accessible!" 
 	    return 1
 	fi
 	archiveAndBackup "${spec}" || return 1
     else
-	print -R >&2 "Error: \"${spec}\" does not exist!" 
+	echo >&2 "Error: \"${spec}\" does not exist!" 
 	return 1
     fi
 }
@@ -174,21 +168,21 @@ printUsage()
 while [ $# -ne 0 ]
 do
     case "$1" in
-	--help|-h|-\?)	shift; printUsage "$0"; exit 1;;
-	--archive-program)	shift; archiveProgram=$1; shift;;
-	--archive-extension)	shift; archiveExtension=$1; shift;;
-	--)		shift; break;;
-	*)		break;;
+	--help|-h|-\?)		shift; printUsage "$0"; exit 1;;
+	--archive-program)	shift; archiveProgram="$1"; shift;;
+	--archive-extension)	shift; archiveExtension="$1"; shift;;
+	--)			shift; break;;
+	*)			break;;
     esac
 done
-if [ $# -eq 0 ]
-then
+if [ $# -eq 0 ]; then
     printUsage "$0"
     exit 1
 fi
 
-typeset isSuccess=""
-typeset isFailure=""
+readonly timestamp=$(date +%Y%m%d)
+isSuccess=""
+isFailure=""
 
 while [ $# -ne 0 ]
 do
@@ -196,8 +190,7 @@ do
     shift
 done
 
-if [ "${isFailure}" ]
-then
+if [ "${isFailure}" ]; then
     [ "${isSuccess}" ] && exit 2 || exit 1
 fi
 
