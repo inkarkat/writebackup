@@ -22,6 +22,11 @@
 #   specifying
 #	--archive-program "tar cvf" --archive-extension .tar
 #	
+# DIAGNOSTICS:
+#   0	Complete success. 
+#   1	Failed to backup any file(s). 
+#   2	Partial success; some file(s) could not be backed up. 
+#
 # REMARKS: 
 #	
 # Copyright: (C) 2007 by Ingo Karkat
@@ -53,7 +58,7 @@ archiveAndBackup()
 
     print -R "Archiving ${dirspec}..."
     typeset savedCwd=$(pwd)
-    cd "${baseDirspec}" && eval "${archiveProgram}" "${backupFilespec}" "${archiveDirBasename}/" # > /dev/null
+    cd "${baseDirspec}" && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
     if [ $? -eq 0 ]
     then
 	print -R "Backed up to $(basename -- "${backupFilespec}")"
@@ -78,8 +83,9 @@ getBackupFilename()
 # INPUTS:
 #   filespec    Filespec of the original file to be backed up. 
 # RETURN VALUES:
-#   Filespec of the backup file, or nothing if no more backup filenames are
-#   available. 
+#   Filespec of the backup file to stdout, or nothing if no more backup
+#   filenames are available. 
+#   0 on success, 1 on failure
 ###############################################################################
 {
     typeset filespec=$1
@@ -122,7 +128,7 @@ writebackup()
 # INPUTS:
 #   spec    path and name
 # RETURN VALUES:
-#   
+#   0 on success, 1 on failure
 ###############################################################################
 {
     typeset spec=$1
@@ -163,6 +169,8 @@ printUsage()
     echo >&2 "Usage: \"$(basename "$1")\" [--archive-program \"zip -9 -r\" --archive-extension .zip] file [,...] [--help|-h|-?]"
 }
 
+#------------------------------------------------------------------------------
+
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -179,9 +187,17 @@ then
     exit 1
 fi
 
+typeset isSuccess=""
+typeset isFailure=""
+
 while [ $# -ne 0 ]
 do
-    writebackup "$1"
+    writebackup "$1" && isSuccess="true" || isFailure="true"
     shift
 done
+
+if [ "${isFailure}" ]
+then
+    [ "${isSuccess}" ] && exit 2 || exit 1
+fi
 
