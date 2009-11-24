@@ -26,6 +26,7 @@
 #   0	Complete success. 
 #   1	Failed to backup any file(s). 
 #   2	Partial success; some file(s) could not be backed up. 
+#   3	Bad invocation, wrong or missing command-line arguments. 
 #
 # REMARKS: 
 #	
@@ -35,7 +36,9 @@
 #   See http://www.gnu.org/copyleft/gpl.txt 
 #
 # REVISION	DATE		REMARKS 
-#   1.10.003	28-Apr-2009	Converted from Korn shell to Bash script. 
+#   1.11.003	28-Apr-2009	Converted from Korn shell to Bash script. 
+#				Now complaining about wrong command-line
+#				arguments. 
 #   1.10.002	05-Dec-2007	Factored out function getBackupFilename(). 
 #				Added handling of directories. 
 #   1.00.001	10-Mar-2007	Added copyright, prepared for publishing. 
@@ -43,7 +46,7 @@
 #				added ability to pass in more than one file. 
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
-#FILE_SCCS = "@(#)writebackup.sh	1.10.003	(28-Apr-2009)	tools";
+#FILE_SCCS = "@(#)writebackup.sh	1.11.003	(28-Apr-2009)	tools";
 
 shopt -qu xpg_echo
 
@@ -168,16 +171,17 @@ printUsage()
 while [ $# -ne 0 ]
 do
     case "$1" in
-	--help|-h|-\?)		shift; printUsage "$0"; exit 1;;
+	--help|-h|-\?)		shift; printUsage "$0"; exit 0;;
 	--archive-program)	shift; archiveProgram="$1"; shift;;
 	--archive-extension)	shift; archiveExtension="$1"; shift;;
 	--)			shift; break;;
+	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
 	*)			break;;
     esac
 done
 if [ $# -eq 0 ]; then
     printUsage "$0"
-    exit 1
+    exit 3
 fi
 
 readonly timestamp=$(date +%Y%m%d)
