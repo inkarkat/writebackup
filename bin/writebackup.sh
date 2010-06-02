@@ -36,6 +36,7 @@
 #   See http://www.gnu.org/copyleft/gpl.txt 
 #
 # REVISION	DATE		REMARKS 
+#   1.12.004	25-Nov-2009	Now checking return status of 'cp' command. 
 #   1.11.003	28-Apr-2009	Converted from Korn shell to Bash script. 
 #				Now complaining about wrong command-line
 #				arguments. 
@@ -46,7 +47,7 @@
 #				added ability to pass in more than one file. 
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
-#FILE_SCCS = "@(#)writebackup.sh	1.11.003	(28-Apr-2009)	tools";
+#FILE_SCCS = "@(#)writebackup.sh	1.12.004	(25-Nov-2009)	tools";
 
 shopt -qu xpg_echo
 
@@ -143,7 +144,7 @@ writebackup()
 
 	local -r backupFilespec=$(getBackupFilename "${spec}")
 	if [ "${backupFilespec}" ]; then
-	    cp "${spec}" "${backupFilespec}"
+	    cp "${spec}" "${backupFilespec}" || { return 1; }
 	    echo "Backed up to $(basename -- "${backupFilespec}")"
 	    return 0
 	else
