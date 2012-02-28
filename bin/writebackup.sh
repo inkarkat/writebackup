@@ -29,13 +29,23 @@
 #   3	Bad invocation, wrong or missing command-line arguments. 
 #
 # REMARKS: 
+#
+# DEPENDENCIES:
+#   - cp, dc
 #	
-# Copyright: (C) 2007-2009 by Ingo Karkat
+# Copyright: (C) 2007-2010 Ingo Karkat
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License.
 #   See http://www.gnu.org/copyleft/gpl.txt 
 #
+# FILE_SCCS = "@(#)writebackup.sh	1.13.005	(03-Jun-2010)	tools";
+#
 # REVISION	DATE		REMARKS 
+#   1.13.005	03-Jun-2010	Now removing the execute permission on the
+#				backup; it's unlikely that someone wants to
+#				execute a backed-up executable, and this change
+#				makes writebackup.sh consistent with the
+#				behavior of the writebackup.vim plugin for Vim. 
 #   1.12.004	25-Nov-2009	Now checking return status of 'cp' command. 
 #   1.11.003	28-Apr-2009	Converted from Korn shell to Bash script. 
 #				Now complaining about wrong command-line
@@ -47,7 +57,6 @@
 #				added ability to pass in more than one file. 
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
-#FILE_SCCS = "@(#)writebackup.sh	1.12.004	(25-Nov-2009)	tools";
 
 shopt -qu xpg_echo
 
@@ -144,7 +153,9 @@ writebackup()
 
 	local -r backupFilespec=$(getBackupFilename "${spec}")
 	if [ "${backupFilespec}" ]; then
-	    cp "${spec}" "${backupFilespec}" || { return 1; }
+	    # Remove the execute permission on the backup. 
+	    umask 0111
+	    cp -- "${spec}" "${backupFilespec}" || { return 1; }
 	    echo "Backed up to $(basename -- "${backupFilespec}")"
 	    return 0
 	else
