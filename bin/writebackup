@@ -32,15 +32,19 @@
 #
 # DEPENDENCIES:
 #   - cp, dc
+#   - for archives: readlink, zip (or other archive tool)
 #
-# Copyright: (C) 2007-2010 Ingo Karkat
+# Copyright: (C) 2007-2012 Ingo Karkat
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License.
 #   See http://www.gnu.org/copyleft/gpl.txt
 #
-# FILE_SCCS = "@(#)writebackup	1.13.005	(03-Jun-2010)	tools";
+# FILE_SCCS = "@(#)writebackup	1.20.006	(13-Apr-2012)	tools";
 #
 # REVISION	DATE		REMARKS
+#   1.20.006	13-Apr-2012	ENH: Allow different backup directory via
+#				--backup-dir parameter.
+#				Use pushd instead of cd.
 #   1.13.005	03-Jun-2010	Now removing the execute permission on the
 #				backup; it's unlikely that someone wants to
 #				execute a backed-up executable, and this change
@@ -69,18 +73,17 @@ archiveAndBackup()
 
     local -r archiveDirBasename=$(basename -- "${dirspec}")
     local -r baseDirspec=$(dirname -- "${dirspec}")
-    local -r backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")
-    [ ! "${backupFilespec}" ] && return 1
+    local -r backupAbsoluteFilespec=$(readlink -nf -- "$(getBackupFilename "${backupDir}${dirspec}${archiveExtension}")")
+    [ "$backupAbsoluteFilespec" ] || return 1
 
     echo "Archiving ${dirspec}..."
-    local -r savedCwd=$(pwd)
-    cd "${baseDirspec}" && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
+    pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupAbsoluteFilespec}\" \"${archiveDirBasename}/\"
     if [ $? -eq 0 ]; then
-	echo "Backed up to $(basename -- "${backupFilespec}")"
-	cd "${savedCwd}" && return 0 || return 1
+	echo "Backed up to ${backupDir}$(basename -- "${backupAbsoluteFilespec}")"
+	popd >/dev/null && return 0 || return 1
     else
 	echo >&2 "Could not create archive! "
-	cd "${savedCwd}"
+	popd >/dev/null
 	return 1
     fi
 }
@@ -151,12 +154,11 @@ writebackup()
 	    return 1
 	fi
 
-	local -r backupFilespec=$(getBackupFilename "${spec}")
+	local -r backupFilespec=$(getBackupFilename "${backupDir}${spec}")
 	if [ "${backupFilespec}" ]; then
-	    # Remove the execute permission on the backup.
-	    umask 0111
+	    umask 0111	# Drop the execute permission on the backup.
 	    cp -- "${spec}" "${backupFilespec}" || { return 1; }
-	    echo "Backed up to $(basename -- "${backupFilespec}")"
+	    echo "Backed up to ${backupDir}$(basename -- "${backupFilespec}")"
 	    return 0
 	else
 	    return 1
@@ -175,10 +177,12 @@ writebackup()
 
 printUsage()
 {
-    echo >&2 "Usage: \"$(basename "$1")\" [--archive-program \"zip -9 -r\" --archive-extension .zip] file [,...] [--help|-h|-?]"
+    echo >&2 "Usage: \"$(basename "$1")\" [--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d <dir>] <file> [,...] [--help|-h|-?]"
 }
 
 #------------------------------------------------------------------------------
+
+backupDir=
 
 while [ $# -ne 0 ]
 do
@@ -186,6 +190,14 @@ do
 	--help|-h|-\?)		shift; printUsage "$0"; exit 0;;
 	--archive-program)	shift; archiveProgram="$1"; shift;;
 	--archive-extension)	shift; archiveExtension="$1"; shift;;
+	--backup-dir|-d)	if [ -z "$2" ]; then
+				    { echo "ERROR: Must pass directory after ${1}!"; echo; printUsage "$0"; } >&2
+				    exit 3
+				fi
+				shift
+				backupDir="${1%/}/"
+				shift
+				;;
 	--)			shift; break;;
 	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
 	*)			break;;
@@ -193,6 +205,10 @@ do
 done
 if [ $# -eq 0 ]; then
     printUsage "$0"
+    exit 3
+fi
+if [ "$backupDir" -a ! -d "${backupDir%/}" ]; then
+    echo "ERROR: Backup dir does not exist: \"${backupDir%/}\"!"
     exit 3
 fi
 
