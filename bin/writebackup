@@ -1,7 +1,7 @@
 #!/bin/bash
 #########################################################################/^--##
 ##
-# FILE: 	writebackup.sh
+# FILE: 	writebackup
 # PRODUCT:	tools
 # AUTHOR: 	Ingo Karkat <ingo@karkat.de>
 # DATE CREATED:	10-Jul-2003
@@ -38,7 +38,7 @@
 #   under the terms of the GNU General Public License.
 #   See http://www.gnu.org/copyleft/gpl.txt 
 #
-# FILE_SCCS = "@(#)writebackup.sh	1.13.005	(03-Jun-2010)	tools";
+# FILE_SCCS = "@(#)writebackup	1.13.005	(03-Jun-2010)	tools";
 #
 # REVISION	DATE		REMARKS 
 #   1.13.005	03-Jun-2010	Now removing the execute permission on the
@@ -209,4 +209,3 @@ done
 if [ "${isFailure}" ]; then
     [ "${isSuccess}" ] && exit 2 || exit 1
 fi
-
