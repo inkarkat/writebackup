@@ -7,7 +7,7 @@
 # DATE CREATED:	10-Jul-2003
 #
 ###############################################################################
-# CONTENTS: 
+# CONTENTS:
 #   Write subsequent backups of passed file(s) with a current date file
 #   extension (format '.YYYYMMDD[a-z]') in the same directory as the file
 #   itself. The first backup of a day has letter 'a' appended, the next 'b', and
@@ -17,44 +17,44 @@
 #   file extension. For example, a directory 'foo' will be backed up to
 #   'foo.zip.20070911a'. This zip file will only contain the 'foo' directory at
 #   its top level; 'foo' itself will contain the entire subtree of the original
-#   'foo' directory. 
+#   'foo' directory.
 #   The archiver can be changed; e.g. you could use 'tar' instead of 'zip' by
 #   specifying
 #	--archive-program "tar cvf" --archive-extension .tar
-#	
-# DIAGNOSTICS:
-#   0	Complete success. 
-#   1	Failed to backup any file(s). 
-#   2	Partial success; some file(s) could not be backed up. 
-#   3	Bad invocation, wrong or missing command-line arguments. 
 #
-# REMARKS: 
+# DIAGNOSTICS:
+#   0	Complete success.
+#   1	Failed to backup any file(s).
+#   2	Partial success; some file(s) could not be backed up.
+#   3	Bad invocation, wrong or missing command-line arguments.
+#
+# REMARKS:
 #
 # DEPENDENCIES:
 #   - cp, dc
-#	
+#
 # Copyright: (C) 2007-2010 Ingo Karkat
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License.
-#   See http://www.gnu.org/copyleft/gpl.txt 
+#   See http://www.gnu.org/copyleft/gpl.txt
 #
 # FILE_SCCS = "@(#)writebackup	1.13.005	(03-Jun-2010)	tools";
 #
-# REVISION	DATE		REMARKS 
+# REVISION	DATE		REMARKS
 #   1.13.005	03-Jun-2010	Now removing the execute permission on the
 #				backup; it's unlikely that someone wants to
 #				execute a backed-up executable, and this change
 #				makes writebackup.sh consistent with the
-#				behavior of the writebackup.vim plugin for Vim. 
-#   1.12.004	25-Nov-2009	Now checking return status of 'cp' command. 
-#   1.11.003	28-Apr-2009	Converted from Korn shell to Bash script. 
+#				behavior of the writebackup.vim plugin for Vim.
+#   1.12.004	25-Nov-2009	Now checking return status of 'cp' command.
+#   1.11.003	28-Apr-2009	Converted from Korn shell to Bash script.
 #				Now complaining about wrong command-line
-#				arguments. 
-#   1.10.002	05-Dec-2007	Factored out function getBackupFilename(). 
-#				Added handling of directories. 
-#   1.00.001	10-Mar-2007	Added copyright, prepared for publishing. 
-#	0.02	22-Sep-2006	Cleaned up code, renamed to 'writebackup.sh', 
-#				added ability to pass in more than one file. 
+#				arguments.
+#   1.10.002	05-Dec-2007	Factored out function getBackupFilename().
+#				Added handling of directories.
+#   1.00.001	10-Mar-2007	Added copyright, prepared for publishing.
+#	0.02	22-Sep-2006	Cleaned up code, renamed to 'writebackup.sh',
+#				added ability to pass in more than one file.
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
 
@@ -90,41 +90,41 @@ getBackupFilename()
 # PURPOSE:
 #   Resolve the passed filename into the filename that will be used for the next
 #   backup. Path information is retained, the backup extension 'YYYYMMDD(a-z)'
-#   will be appended. 
+#   will be appended.
 # ASSUMPTIONS / PRECONDITIONS:
 #   ? List of any external variable, control, or other element whose state affects this procedure.
 # EFFECTS / POSTCONDITIONS:
-#   Prints error message to stderr. 
+#   Prints error message to stderr.
 # INPUTS:
-#   filespec    Filespec of the original file to be backed up. 
+#   filespec    Filespec of the original file to be backed up.
 # RETURN VALUES:
 #   Filespec of the backup file to stdout, or nothing if no more backup
-#   filenames are available. 
+#   filenames are available.
 #   0 on success, 1 on failure
 ###############################################################################
 {
     local -r filespec=$1
 
-    # Determine backup file name. 
+    # Determine backup file name.
     local number=97   # letter 'a'
     while [ $number -le 122 ] # until letter 'z'
     do
-	# Because the shell cannot increase characters, only add with numbers, we 
-	# loop over the ASCII value of the backup letter, then use the desktop 
-	# calculator to convert this into the corresponding character. 
+	# Because the shell cannot increase characters, only add with numbers, we
+	# loop over the ASCII value of the backup letter, then use the desktop
+	# calculator to convert this into the corresponding character.
 	local numberchar=$(echo ${number}P|dc)
 	local backupFilespec="${filespec}.${timestamp}${numberchar}"
 	if [ -a "${backupFilespec}" ]; then
-	    # Current backup letter already exists, try next one. 
+	    # Current backup letter already exists, try next one.
 	    let number+=1
 	    continue
 	fi
-	# Found unused backup letter. 
+	# Found unused backup letter.
 	echo "${backupFilespec}"
 	return 0
     done
 
-    # All backup letters a-z are already used; do not return a backup filename. 
+    # All backup letters a-z are already used; do not return a backup filename.
     echo >&2 "Ran out of backup file names for file \"${filespec}\"!"
     return 1
 }
@@ -132,11 +132,11 @@ getBackupFilename()
 writebackup()
 ###############################################################################
 # PURPOSE:
-#   Create a backup of the passed file or directory. 
+#   Create a backup of the passed file or directory.
 # ASSUMPTIONS / PRECONDITIONS:
-#   Passed file or directory exists; otherwise, an error message is printed. 
+#   Passed file or directory exists; otherwise, an error message is printed.
 # EFFECTS / POSTCONDITIONS:
-#   Creates a backup copy of the passed file or directory. 
+#   Creates a backup copy of the passed file or directory.
 # INPUTS:
 #   spec    path and name
 # RETURN VALUES:
@@ -147,13 +147,13 @@ writebackup()
 
     if [ -f "${spec}" ]; then
 	if [ ! -r "${spec}" ]; then
-	    echo >&2 "Error: \"${spec}\" is not readable!" 
+	    echo >&2 "Error: \"${spec}\" is not readable!"
 	    return 1
 	fi
 
 	local -r backupFilespec=$(getBackupFilename "${spec}")
 	if [ "${backupFilespec}" ]; then
-	    # Remove the execute permission on the backup. 
+	    # Remove the execute permission on the backup.
 	    umask 0111
 	    cp -- "${spec}" "${backupFilespec}" || { return 1; }
 	    echo "Backed up to $(basename -- "${backupFilespec}")"
@@ -163,12 +163,12 @@ writebackup()
 	fi
     elif [ -d "${spec}" ]; then
 	if [ ! -r "${spec}" -o ! -x "${spec}" ]; then
-	    echo >&2 "Error: \"${spec}\" is not accessible!" 
+	    echo >&2 "Error: \"${spec}\" is not accessible!"
 	    return 1
 	fi
 	archiveAndBackup "${spec}" || return 1
     else
-	echo >&2 "Error: \"${spec}\" does not exist!" 
+	echo >&2 "Error: \"${spec}\" does not exist!"
 	return 1
     fi
 }
@@ -197,15 +197,15 @@ if [ $# -eq 0 ]; then
 fi
 
 readonly timestamp=$(date +%Y%m%d)
-isSuccess=""
-isFailure=""
+isSuccess=
+isFailure=
 
 while [ $# -ne 0 ]
 do
-    writebackup "$1" && isSuccess="true" || isFailure="true"
+    writebackup "$1" && isSuccess=t || isFailure=t
     shift
 done
 
-if [ "${isFailure}" ]; then
-    [ "${isSuccess}" ] && exit 2 || exit 1
+if [ "$isFailure" ]; then
+    [ "$isSuccess" ] && exit 2 || exit 1
 fi
