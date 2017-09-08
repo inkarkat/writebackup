@@ -73,13 +73,17 @@ archiveAndBackup()
 
     local -r archiveDirBasename=$(basename -- "${dirspec}")
     local -r baseDirspec=$(dirname -- "${dirspec}")
-    local -r backupAbsoluteFilespec=$(readlink -nf -- "$(getBackupFilename "${backupDir}${dirspec}${archiveExtension}")")
-    [ "$backupAbsoluteFilespec" ] || return 1
+    if [ "$backupDir" ]; then
+	local -r backupFilespec=$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")")
+    else
+	local -r backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")
+    fi
+    [ "$backupFilespec" ] || return 1
 
     echo "Archiving ${dirspec}..."
-    pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupAbsoluteFilespec}\" \"${archiveDirBasename}/\"
+    pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
     if [ $? -eq 0 ]; then
-	echo "Backed up to ${backupDir}$(basename -- "${backupAbsoluteFilespec}")"
+	echo "Backed up to ${backupDir}$(basename -- "${backupFilespec}")"
 	popd >/dev/null && return 0 || return 1
     else
 	echo >&2 "Could not create archive! "
@@ -99,7 +103,7 @@ getBackupFilename()
 # EFFECTS / POSTCONDITIONS:
 #   Prints error message to stderr.
 # INPUTS:
-#   filespec    Filespec of the original file to be backed up.
+#   filespec    Filespec of the original file, but in the backup location.
 # RETURN VALUES:
 #   Filespec of the backup file to stdout, or nothing if no more backup
 #   filenames are available.
@@ -154,7 +158,12 @@ writebackup()
 	    return 1
 	fi
 
-	local -r backupFilespec=$(getBackupFilename "${backupDir}${spec}")
+	if [ "$backupDir" ]; then
+	    local -r backupTemplate="${backupDir}$(basename -- "${spec}")"
+	else
+	    local -r backupTemplate=$spec
+	fi
+	local -r backupFilespec=$(getBackupFilename "${backupTemplate}")
 	if [ "${backupFilespec}" ]; then
 	    umask 0111	# Drop the execute permission on the backup.
 	    cp -- "${spec}" "${backupFilespec}" || { return 1; }
