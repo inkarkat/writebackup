@@ -24,6 +24,8 @@
 #   1.40.008	29-Dec-2018	ENH: Allow to do only a single backup each day
 #				via --once-today.
 #				Extend the help into long and short variants.
+#				Use printf instead of echo; no need to clear
+#				shell option xpg_echo any longer.
 #   1.30.007	09-Sep-2017	ENH: Allow to remove the original file via
 #				--delete-original.
 #   1.20.006	13-Apr-2012	ENH: Allow different backup directory via
@@ -142,7 +144,7 @@ writebackup()
 
     if [ -f "${spec}" ]; then
 	if [ ! -r "${spec}" ]; then
-	    printf >&2 'Error: "%s" is not readable!\n' "$spec"
+	    printf >&2 'ERROR: "%s" is not readable!\n' "$spec"
 	    return 1
 	fi
 
@@ -168,7 +170,7 @@ writebackup()
 	fi
     elif [ -d "${spec}" ]; then
 	if [ ! -r "${spec}" -o ! -x "${spec}" ]; then
-	    printf >&2 'Error: "%s" is not accessible!' "$spec"
+	    printf >&2 'ERROR: "%s" is not accessible!' "$spec"
 	    return 1
 	fi
 	archiveAndBackup "${spec}" || return 1
@@ -178,7 +180,7 @@ writebackup()
 		printf 'Deleted original %s\n' "$spec"
 	fi
     else
-	printf >&2 'Error: "%s" does not exist!\n' "$spec"
+	printf >&2 'ERROR: "%s" does not exist!\n' "$spec"
 	return 1
     fi
 }
