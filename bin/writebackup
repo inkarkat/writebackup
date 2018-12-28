@@ -46,8 +46,6 @@
 #	0.01	10-Jul-2003	file creation
 ###############################################################################
 
-shopt -qu xpg_echo
-
 archiveProgram='zip -9 -r'
 archiveExtension='.zip'
 
@@ -64,13 +62,13 @@ archiveAndBackup()
     fi
     [ "$backupFilespec" ] || return 1
 
-    echo "Archiving ${dirspec}..."
+    printf 'Archiving %s...\n' "$dirspec"
     pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
     if [ $? -eq 0 ]; then
-	echo "Backed up to ${backupDir}$(basename -- "${backupFilespec}")"
+	printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${backupFilespec}")"
 	popd >/dev/null && return 0 || return 1
     else
-	echo >&2 "Could not create archive! "
+	echo >&2 'Could not create archive!'
 	popd >/dev/null
 	return 1
     fi
@@ -117,12 +115,12 @@ getBackupFilename()
 	    continue
 	fi
 	# Found unused backup letter.
-	echo "${backupFilespec}"
+	printf '%s\n' "$backupFilespec"
 	return 0
     done
 
     # All backup letters a-z are already used; do not return a backup filename.
-    echo >&2 "Ran out of backup file names for file \"${filespec}\"!"
+    printf >&2 'Ran out of backup file names for file "%s"!\n' "$filespec"
     return 1
 }
 
@@ -144,7 +142,7 @@ writebackup()
 
     if [ -f "${spec}" ]; then
 	if [ ! -r "${spec}" ]; then
-	    echo >&2 "Error: \"${spec}\" is not readable!"
+	    printf >&2 'Error: "%s" is not readable!\n' "$spec"
 	    return 1
 	fi
 
@@ -157,11 +155,11 @@ writebackup()
 	if [ "${backupFilespec}" ]; then
 	    umask 0111	# Drop the execute permission on the backup.
 	    cp -- "${spec}" "${backupFilespec}" || return 1
-	    echo "Backed up to ${backupDir}$(basename -- "${backupFilespec}")"
+	    printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${backupFilespec}")"
 
 	    if [ "$isDeleteOriginal" ]; then
 		rm --force -- "${spec}" || return 1
-		echo "Deleted original ${spec}"
+		printf 'Deleted original %s\n' "$spec"
 	    fi
 
 	    return 0
@@ -170,17 +168,17 @@ writebackup()
 	fi
     elif [ -d "${spec}" ]; then
 	if [ ! -r "${spec}" -o ! -x "${spec}" ]; then
-	    echo >&2 "Error: \"${spec}\" is not accessible!"
+	    printf >&2 'Error: "%s" is not accessible!' "$spec"
 	    return 1
 	fi
 	archiveAndBackup "${spec}" || return 1
 
 	if [ "$isDeleteOriginal" ]; then
 		rm --force --recursive -- "${spec}" || return 1
-		echo "Deleted original ${spec}"
+		printf 'Deleted original %s\n' "$spec"
 	fi
     else
-	echo >&2 "Error: \"${spec}\" does not exist!"
+	printf >&2 'Error: "%s" does not exist!\n' "$spec"
 	return 1
     fi
 }
@@ -270,7 +268,7 @@ if [ $# -eq 0 ]; then
     exit 3
 fi
 if [ "$backupDir" -a ! -d "${backupDir%/}" ]; then
-    echo >&2 "ERROR: Backup dir does not exist: \"${backupDir%/}\"!"
+    printf >&2 'ERROR: Backup dir does not exist: "%s"!\n' "${backupDir%/}"
     exit 3
 fi
 
