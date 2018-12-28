@@ -39,9 +39,11 @@
 #   under the terms of the GNU General Public License.
 #   See http://www.gnu.org/copyleft/gpl.txt
 #
-# FILE_SCCS = "@(#)writebackup	1.20.006	(13-Apr-2012)	tools";
+# FILE_SCCS = "@(#)writebackup	1.30.007	(09-Sep-2017)	tools";
 #
 # REVISION	DATE		REMARKS
+#   1.30.007	09-Sep-2017	ENH: Allow to remove the original file via
+#				--delete-original.
 #   1.20.006	13-Apr-2012	ENH: Allow different backup directory via
 #				--backup-dir parameter.
 #				Use pushd instead of cd.
@@ -166,8 +168,14 @@ writebackup()
 	local -r backupFilespec=$(getBackupFilename "${backupTemplate}")
 	if [ "${backupFilespec}" ]; then
 	    umask 0111	# Drop the execute permission on the backup.
-	    cp -- "${spec}" "${backupFilespec}" || { return 1; }
+	    cp -- "${spec}" "${backupFilespec}" || return 1
 	    echo "Backed up to ${backupDir}$(basename -- "${backupFilespec}")"
+
+	    if [ "$isDeleteOriginal" ]; then
+		rm --force -- "${spec}" || return 1
+		echo "Deleted original ${spec}"
+	    fi
+
 	    return 0
 	else
 	    return 1
@@ -178,6 +186,11 @@ writebackup()
 	    return 1
 	fi
 	archiveAndBackup "${spec}" || return 1
+
+	if [ "$isDeleteOriginal" ]; then
+		rm --force --recursive -- "${spec}" || return 1
+		echo "Deleted original ${spec}"
+	fi
     else
 	echo >&2 "Error: \"${spec}\" does not exist!"
 	return 1
@@ -186,12 +199,13 @@ writebackup()
 
 printUsage()
 {
-    echo >&2 "Usage: \"$(basename "$1")\" [--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d <dir>] <file> [,...] [--help|-h|-?]"
+    echo >&2 "Usage: \"$(basename "$1")\" [--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d <dir>] [--delete-original] <file> [,...] [--help|-h|-?]"
 }
 
 #------------------------------------------------------------------------------
 
 backupDir=
+isDeleteOriginal=
 
 while [ $# -ne 0 ]
 do
@@ -207,6 +221,7 @@ do
 				backupDir="${1%/}/"
 				shift
 				;;
+	--delete-original)	shift; isDeleteOriginal=t;;
 	--)			shift; break;;
 	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
 	*)			break;;
