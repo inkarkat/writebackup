@@ -194,7 +194,7 @@ printUsage()
     # This is the short help when launched with no or incorrect arguments.
     # It is printed to stderr to avoid accidental processing.
     printShortUsage "$1" >&2
-    printf 'Try %q %s\n' "$(basename "$1")" '--help for more information.'
+    printf '\nTry %q %s\n' "$(basename "$1")" '--help for more information.'
 }
 printLongUsage()
 {
@@ -251,7 +251,7 @@ do
 	--archive-program)	shift; archiveProgram="$1"; shift;;
 	--archive-extension)	shift; archiveExtension="$1"; shift;;
 	--backup-dir|-d)	if [ -z "$2" ]; then
-				    { echo "ERROR: Must pass directory after ${1}!"; echo; printShortUsage "$0"; } >&2
+				    { echo "ERROR: Must pass directory after ${1}!"; echo; printUsage "$0"; } >&2
 				    exit 3
 				fi
 				shift
