@@ -1,0 +1,70 @@
+#!/bin/bash
+
+printShortUsage()
+{
+    # Note: short followed by long option; if the user knows the short one, she can
+    # skim the long one.
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[-f|--force] [--once-today] [--] SOURCE DEST [-?|-h|--help]'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf >&2 '\nTry %q --help for more information.\n' "$(basename "$1")"
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+Creates a backup of an existing target file with a 'current date + counter' file
+extension (via writebackup) before moving SOURCE to DEST.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --force|-f			Move (and overwrite!) even when the backup of
+				the existing DEST fails.
+    --once-today		A FILE is only backed up if no backup on the
+				current day was already made.
+EXIT STATUS:
+    0	Complete success.
+    1	Failed to backup / move.
+    2	Bad invocation, wrong or missing command-line arguments.
+HELPTEXT
+}
+
+isForce=
+isOnceToday=
+typeset -a writebackupArgs=()
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
+	--force|-f)	shift; isForce=t;;
+	--once-today)	writebackupArgs+=("$1"); shift; isOnceToday=t;;
+	--)		shift; break;;
+	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
+	*)		break;;
+    esac
+done
+if [ $# -ne 2 ]; then
+    printUsage "$0" >&2
+    exit 2
+fi
+
+SOURCE="$1"; shift
+DEST="$1"; shift
+
+target="$DEST"; [ -d "$target" ] && target="${target%/}$(basename -- "$SOURCE")"
+if [ ! -e "$SOURCE" ]; then
+    printf >&2 "%s: cannot stat '%s': No such file or directory\\n" "$(basename -- "$0")" "$SOURCE"
+    exit 1
+elif [ -e "$target" ]; then
+    if ! writebackup "${writebackupArgs[@]}" -- "$target"; then
+	[ "$isOnceToday" ] && [ -e "${target}.$(date +%Y%m%d)a" ] || [ "$isForce" ] || exit 1
+    fi
+fi
+exec mv --force -- "$SOURCE" "$DEST"
