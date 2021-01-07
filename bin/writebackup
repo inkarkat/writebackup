@@ -1,9 +1,9 @@
 #!/bin/bash
 #########################################################################/^--##
 ##
-# FILE: 	writebackup
+# FILE:		writebackup
 # PRODUCT:	tools
-# AUTHOR: 	Ingo Karkat <ingo@karkat.de>
+# AUTHOR:	Ingo Karkat <ingo@karkat.de>
 # DATE CREATED:	10-Jul-2003
 #
 ###############################################################################
@@ -18,34 +18,7 @@
 #   under the terms of the GNU General Public License.
 #   See http://www.gnu.org/copyleft/gpl.txt
 #
-# FILE_SCCS = "@(#)writebackup	1.40.008	(29-Dec-2018)	tools";
-#
-# REVISION	DATE		REMARKS
-#   1.40.008	29-Dec-2018	ENH: Allow to do only a single backup each day
-#				via --once-today.
-#				Extend the help into long and short variants.
-#				Use printf instead of echo; no need to clear
-#				shell option xpg_echo any longer.
-#   1.30.007	09-Sep-2017	ENH: Allow to remove the original file via
-#				--delete-original.
-#   1.20.006	13-Apr-2012	ENH: Allow different backup directory via
-#				--backup-dir parameter.
-#				Use pushd instead of cd.
-#   1.13.005	03-Jun-2010	Now removing the execute permission on the
-#				backup; it's unlikely that someone wants to
-#				execute a backed-up executable, and this change
-#				makes writebackup.sh consistent with the
-#				behavior of the writebackup.vim plugin for Vim.
-#   1.12.004	25-Nov-2009	Now checking return status of 'cp' command.
-#   1.11.003	28-Apr-2009	Converted from Korn shell to Bash script.
-#				Now complaining about wrong command-line
-#				arguments.
-#   1.10.002	05-Dec-2007	Factored out function getBackupFilename().
-#				Added handling of directories.
-#   1.00.001	10-Mar-2007	Added copyright, prepared for publishing.
-#	0.02	22-Sep-2006	Cleaned up code, renamed to 'writebackup.sh',
-#				added ability to pass in more than one file.
-#	0.01	10-Jul-2003	file creation
+# @(#)writebackup	$Id$	writebackup
 ###############################################################################
 
 archiveProgram='zip -9 -r'
