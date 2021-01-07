@@ -21,6 +21,7 @@
 # @(#)writebackup	$Id$	writebackup
 ###############################################################################
 
+: ${WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS:=1}
 archiveProgram='zip -9 -r'
 archiveExtension='.zip'
 
@@ -30,12 +31,13 @@ archiveAndBackup()
 
     local -r archiveDirBasename=$(basename -- "${dirspec}")
     local -r baseDirspec=$(dirname -- "${dirspec}")
+    local status=0 backupFilespec
     if [ "$backupDir" ]; then
-	local -r backupFilespec=$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")")
+	backupFilespec=$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")") || status=$?
     else
-	local -r backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")
+	backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")") || status=$?
     fi
-    [ "$backupFilespec" ] || return 1
+    [ "$backupFilespec" ] || return $status
 
     printf 'Archiving %s...\n' "$dirspec"
     pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
@@ -82,7 +84,7 @@ getBackupFilename()
 	    # Current backup letter already exists.
 	    if [ "$isOnceToday" ]; then
 		# A backup for today already exists; don't do another one.
-		return 1
+		return $WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS
 	    fi
 
 	    # Try next backup letter.
@@ -126,7 +128,7 @@ writebackup()
 	else
 	    local -r backupTemplate=$spec
 	fi
-	local -r backupFilespec=$(getBackupFilename "${backupTemplate}")
+	local status=0 backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || status=$?
 	if [ "${backupFilespec}" ]; then
 	    umask 0111	# Drop the execute permission on the backup.
 	    cp -- "${spec}" "${backupFilespec}" || return 1
@@ -139,7 +141,7 @@ writebackup()
 
 	    return 0
 	else
-	    return 1
+	    return $status
 	fi
     elif [ -d "${spec}" ]; then
 	if [ ! -r "${spec}" -o ! -x "${spec}" ]; then
@@ -206,6 +208,7 @@ HELPDESCRIPTION
 EXIT STATUS:
     0	Complete success.
     1	Failed to backup any file(s).
+    $WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS	A backup was made already today and --once-today is given.
     2	Partial success; some file(s) could not be backed up.
     3	Bad invocation, wrong or missing command-line arguments.
 HELPTEXT

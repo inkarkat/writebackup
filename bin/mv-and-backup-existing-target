@@ -37,14 +37,13 @@ HELPTEXT
 }
 
 isForce=
-isOnceToday=
 typeset -a writebackupArgs=()
 while [ $# -ne 0 ]
 do
     case "$1" in
 	--help|-h|-\?)	shift; printLongUsage "$0"; exit 0;;
 	--force|-f)	shift; isForce=t;;
-	--once-today)	writebackupArgs+=("$1"); shift; isOnceToday=t;;
+	--once-today)	writebackupArgs+=("$1"); shift;;
 	--)		shift; break;;
 	-*)		{ echo "ERROR: Unknown option \"$1\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)		break;;
@@ -63,8 +62,8 @@ if [ ! -e "$SOURCE" ]; then
     printf >&2 "%s: cannot stat '%s': No such file or directory\\n" "$(basename -- "$0")" "$SOURCE"
     exit 1
 elif [ -e "$target" ]; then
-    if ! writebackup "${writebackupArgs[@]}" -- "$target"; then
-	[ "$isOnceToday" ] && [ -e "${target}.$(date +%Y%m%d)a" ] || [ "$isForce" ] || exit 1
+    if ! WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS=0 writebackup "${writebackupArgs[@]}" -- "$target"; then
+	[ "$isForce" ] || exit 1
     fi
 fi
 exec mv --force -- "$SOURCE" "$DEST"
