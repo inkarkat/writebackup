@@ -38,6 +38,10 @@ archiveAndBackup()
 	backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")") || status=$?
     fi
     [ "$backupFilespec" ] || return $status
+    if [ "$isOnlyPrintExtension" ]; then
+	printf '%s\n' ".${backupFilespec##*.}"
+	return 0
+    fi
 
     printf 'Archiving %s...\n' "$dirspec"
     pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
@@ -130,6 +134,11 @@ writebackup()
 	fi
 	local status=0 backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || status=$?
 	if [ "${backupFilespec}" ]; then
+	    if [ "$isOnlyPrintExtension" ]; then
+		printf '%s\n' ".${backupFilespec##*.}"
+		return 0
+	    fi
+
 	    umask 0111	# Drop the execute permission on the backup.
 	    cp -- "${spec}" "${backupFilespec}" || return 1
 	    printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${backupFilespec}")"
@@ -163,6 +172,8 @@ writebackup()
 printShortUsage()
 {
     printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] FILE [...] [--help|-h|-?]'
+    echo
+    printf 'Usage: sed -i"$(%q %s)" -e ... FILE\n' "$(basename "$1")" '[--once-today] --get-extension FILE'
 }
 printUsage()
 {
@@ -193,6 +204,7 @@ directory.
 HELPDESCRIPTION
     echo
     printShortUsage "$1"
+    echo
     cat <<HELPTEXT
     --archive-program ARCHIVER-COMMAND
 				Use a different archive program; e.g. you could
@@ -205,6 +217,8 @@ HELPDESCRIPTION
 				a final backup before getting rid of the file.
     --once-today		A FILE is only backed up if no backup on the
 				current day was already made.
+    --get-extension		Just print the backup extension (or nothing if
+				--once-today and a backup already exists).
 EXIT STATUS:
     0	Complete success.
     1	Failed to backup any file(s).
@@ -219,6 +233,7 @@ HELPTEXT
 backupDir=
 isDeleteOriginal=
 isOnceToday=
+isOnlyPrintExtension=
 
 while [ $# -ne 0 ]
 do
@@ -236,19 +251,29 @@ do
 				;;
 	--delete-original)	shift; isDeleteOriginal=t;;
 	--once-today)		shift; isOnceToday=t;;
+	--get-extension)	shift; isOnlyPrintExtension=t;;
 	--)			shift; break;;
 	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
 	*)			break;;
     esac
 done
 if [ $# -eq 0 ]; then
-    printUsage "$0" >&2
+    printUsage "$0"
     exit 3
-fi
-if [ "$backupDir" -a ! -d "${backupDir%/}" ]; then
-    printf >&2 'ERROR: Backup dir does not exist: "%s"!\n' "${backupDir%/}"
+elif [ "$isOnlyPrintExtension" ] && [ $# -ne 1 ]; then
+    echo 'ERROR: Only a single FILE can be passed with --get-extension.'
+    echo
+    printUsage "$0"
     exit 3
-fi
+elif [ "$isOnlyPrintExtension" ] && [ "$isDeleteOriginal" ]; then
+    echo 'ERROR: Cannot combine --get-extension and --delete-original.'
+    echo
+    printUsage "$0"
+    exit 3
+elif [ "$backupDir" -a ! -d "${backupDir%/}" ]; then
+    printf 'ERROR: Backup dir does not exist: "%s"!\n' "${backupDir%/}"
+    exit 3
+fi >&2
 
 readonly timestamp=$(date +%Y%m%d)
 isSuccess=
