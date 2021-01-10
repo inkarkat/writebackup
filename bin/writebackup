@@ -22,8 +22,112 @@
 ###############################################################################
 
 : ${WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS:=1}
+
+printShortUsage()
+{
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] FILE [...] [--help|-h|-?]'
+    echo
+    printf 'Usage: sed -i"$(%q %s)" -e ... FILE\n' "$(basename "$1")" '[--once-today] --get-extension FILE'
+}
+printUsage()
+{
+    # This is the short help when launched with no or incorrect arguments.
+    # It is printed to stderr to avoid accidental processing.
+    printShortUsage "$1" >&2
+    printf '\nTry %q %s\n' "$(basename "$1")" '--help for more information.'
+}
+printLongUsage()
+{
+    # This is the long "man page" when launched with the help argument.
+    # It is printed to stdout to allow paging with 'more'.
+    cat <<HELPDESCRIPTION
+This is a poor man's revision control system, a primitive alternative to CVS,
+RCS, Subversion, etc., which works with no additional software and almost any
+file system.
+Writes subsequent backups of the current file with a 'current date + counter'
+file extension (format '.YYYYMMDD[a-z]'). The first backup of a day has letter
+'a' appended, the next 'b', and so on. (So that a file can be backed up up to 26
+times on any given day.)
+By default, backups are created in the same directory as the original file; you
+can specify a different directory via -d|--backup-dir.
+Directories will be zipped (individually) into an archive file with date file
+extension. For example, a directory 'foo' will be backed up to
+'foo.zip.20070911a'. This zip file will only contain the 'foo' directory at its
+top level; 'foo' itself will contain the entire subtree of the original 'foo'
+directory.
+HELPDESCRIPTION
+    echo
+    printShortUsage "$1"
+    echo
+    cat <<HELPTEXT
+    --archive-program ARCHIVER-COMMAND
+				Use a different archive program; e.g. you could
+				use 'tar' instead of 'zip' by specifying
+				--archive-program "tar cvf"
+				--archive-extension .tar
+    --archive-extension EXT	Configure the archive extension for a custom
+				archiver.
+    --delete-original		Removes the original file; you can use this for
+				a final backup before getting rid of the file.
+    --once-today		A FILE is only backed up if no backup on the
+				current day was already made.
+    --get-extension		Just print the backup extension (or nothing if
+				--once-today and a backup already exists).
+EXIT STATUS:
+    0	Complete success.
+    1	Failed to backup any file(s).
+    $WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS	A backup was made already today and --once-today is given.
+    2	Partial success; some file(s) could not be backed up.
+    3	Bad invocation, wrong or missing command-line arguments.
+HELPTEXT
+}
+
 archiveProgram='zip -9 -r'
 archiveExtension='.zip'
+backupDir=
+isDeleteOriginal=
+isOnceToday=
+isOnlyPrintExtension=
+while [ $# -ne 0 ]
+do
+    case "$1" in
+	--help|-h|-\?)		shift; printLongUsage "$0"; exit 0;;
+	--archive-program)	shift; archiveProgram="$1"; shift;;
+	--archive-extension)	shift; archiveExtension="$1"; shift;;
+	--backup-dir|-d)	if [ -z "$2" ]; then
+				    { echo "ERROR: Must pass directory after ${1}!"; echo; printUsage "$0"; } >&2
+				    exit 3
+				fi
+				shift
+				backupDir="${1%/}/"
+				shift
+				;;
+	--delete-original)	shift; isDeleteOriginal=t;;
+	--once-today)		shift; isOnceToday=t;;
+	--get-extension)	shift; isOnlyPrintExtension=t;;
+	--)			shift; break;;
+	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
+	*)			break;;
+    esac
+done
+if [ $# -eq 0 ]; then
+    printUsage "$0"
+    exit 3
+elif [ "$isOnlyPrintExtension" ] && [ $# -ne 1 ]; then
+    echo 'ERROR: Only a single FILE can be passed with --get-extension.'
+    echo
+    printUsage "$0"
+    exit 3
+elif [ "$isOnlyPrintExtension" ] && [ "$isDeleteOriginal" ]; then
+    echo 'ERROR: Cannot combine --get-extension and --delete-original.'
+    echo
+    printUsage "$0"
+    exit 3
+elif [ "$backupDir" -a ! -d "${backupDir%/}" ]; then
+    printf 'ERROR: Backup dir does not exist: "%s"!\n' "${backupDir%/}"
+    exit 3
+fi >&2
+
 
 archiveAndBackup()
 {
@@ -160,8 +264,8 @@ writebackup()
 	archiveAndBackup "${spec}" || return 1
 
 	if [ "$isDeleteOriginal" ]; then
-		rm --force --recursive -- "${spec}" || return 1
-		printf 'Deleted original %s\n' "$spec"
+	    rm --force --recursive -- "${spec}" || return 1
+	    printf 'Deleted original %s\n' "$spec"
 	fi
     else
 	printf >&2 'ERROR: "%s" does not exist!\n' "$spec"
@@ -169,111 +273,6 @@ writebackup()
     fi
 }
 
-printShortUsage()
-{
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] FILE [...] [--help|-h|-?]'
-    echo
-    printf 'Usage: sed -i"$(%q %s)" -e ... FILE\n' "$(basename "$1")" '[--once-today] --get-extension FILE'
-}
-printUsage()
-{
-    # This is the short help when launched with no or incorrect arguments.
-    # It is printed to stderr to avoid accidental processing.
-    printShortUsage "$1" >&2
-    printf '\nTry %q %s\n' "$(basename "$1")" '--help for more information.'
-}
-printLongUsage()
-{
-    # This is the long "man page" when launched with the help argument.
-    # It is printed to stdout to allow paging with 'more'.
-    cat <<HELPDESCRIPTION
-This is a poor man's revision control system, a primitive alternative to CVS,
-RCS, Subversion, etc., which works with no additional software and almost any
-file system.
-Writes subsequent backups of the current file with a 'current date + counter'
-file extension (format '.YYYYMMDD[a-z]'). The first backup of a day has letter
-'a' appended, the next 'b', and so on. (So that a file can be backed up up to 26
-times on any given day.)
-By default, backups are created in the same directory as the original file; you
-can specify a different directory via -d|--backup-dir.
-Directories will be zipped (individually) into an archive file with date file
-extension. For example, a directory 'foo' will be backed up to
-'foo.zip.20070911a'. This zip file will only contain the 'foo' directory at its
-top level; 'foo' itself will contain the entire subtree of the original 'foo'
-directory.
-HELPDESCRIPTION
-    echo
-    printShortUsage "$1"
-    echo
-    cat <<HELPTEXT
-    --archive-program ARCHIVER-COMMAND
-				Use a different archive program; e.g. you could
-				use 'tar' instead of 'zip' by specifying
-				--archive-program "tar cvf"
-				--archive-extension .tar
-    --archive-extension EXT	Configure the archive extension for a custom
-				archiver.
-    --delete-original		Removes the original file; you can use this for
-				a final backup before getting rid of the file.
-    --once-today		A FILE is only backed up if no backup on the
-				current day was already made.
-    --get-extension		Just print the backup extension (or nothing if
-				--once-today and a backup already exists).
-EXIT STATUS:
-    0	Complete success.
-    1	Failed to backup any file(s).
-    $WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS	A backup was made already today and --once-today is given.
-    2	Partial success; some file(s) could not be backed up.
-    3	Bad invocation, wrong or missing command-line arguments.
-HELPTEXT
-}
-
-#------------------------------------------------------------------------------
-
-backupDir=
-isDeleteOriginal=
-isOnceToday=
-isOnlyPrintExtension=
-
-while [ $# -ne 0 ]
-do
-    case "$1" in
-	--help|-h|-\?)		shift; printLongUsage "$0"; exit 0;;
-	--archive-program)	shift; archiveProgram="$1"; shift;;
-	--archive-extension)	shift; archiveExtension="$1"; shift;;
-	--backup-dir|-d)	if [ -z "$2" ]; then
-				    { echo "ERROR: Must pass directory after ${1}!"; echo; printUsage "$0"; } >&2
-				    exit 3
-				fi
-				shift
-				backupDir="${1%/}/"
-				shift
-				;;
-	--delete-original)	shift; isDeleteOriginal=t;;
-	--once-today)		shift; isOnceToday=t;;
-	--get-extension)	shift; isOnlyPrintExtension=t;;
-	--)			shift; break;;
-	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
-	*)			break;;
-    esac
-done
-if [ $# -eq 0 ]; then
-    printUsage "$0"
-    exit 3
-elif [ "$isOnlyPrintExtension" ] && [ $# -ne 1 ]; then
-    echo 'ERROR: Only a single FILE can be passed with --get-extension.'
-    echo
-    printUsage "$0"
-    exit 3
-elif [ "$isOnlyPrintExtension" ] && [ "$isDeleteOriginal" ]; then
-    echo 'ERROR: Cannot combine --get-extension and --delete-original.'
-    echo
-    printUsage "$0"
-    exit 3
-elif [ "$backupDir" -a ! -d "${backupDir%/}" ]; then
-    printf 'ERROR: Backup dir does not exist: "%s"!\n' "${backupDir%/}"
-    exit 3
-fi >&2
 
 readonly timestamp=$(date +%Y%m%d)
 isSuccess=
