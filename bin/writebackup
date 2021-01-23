@@ -274,7 +274,8 @@ writebackup()
 }
 
 
-readonly timestamp=$(date +%Y%m%d)
+DATE=date; type -t >/dev/null humanDayDate && DATE=humanDayDate
+readonly timestamp=$($DATE +%Y%m%d)
 isSuccess=
 isFailure=
 
