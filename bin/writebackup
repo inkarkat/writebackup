@@ -10,10 +10,10 @@
 # REMARKS:
 #
 # DEPENDENCIES:
-#   - cp, dc
+#   - cp
 #   - for archives: readlink, zip (or other archive tool)
 #
-# Copyright: (C) 2007-2018 Ingo Karkat
+# Copyright: (C) 2007-2021 Ingo Karkat
 #   This program is free software; you can redistribute it and/or modify it
 #   under the terms of the GNU General Public License.
 #   See http://www.gnu.org/copyleft/gpl.txt
@@ -166,6 +166,7 @@ archiveAndBackup()
     fi
 }
 
+typeset -ra LETTERS=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
 getBackupFilename()
 ###############################################################################
 # PURPOSE:
@@ -187,14 +188,10 @@ getBackupFilename()
     local -r filespec=$1
 
     # Determine backup file name.
-    local number=97   # letter 'a'
-    while [ $number -le 122 ] # until letter 'z'
+    local i=0
+    while [ $i -lt ${#LETTERS[@]} ]
     do
-	# Because the shell cannot increase characters, only add with numbers, we
-	# loop over the ASCII value of the backup letter, then use the desktop
-	# calculator to convert this into the corresponding character.
-	local numberchar=$(echo ${number}P|dc)
-	local backupFilespec="${filespec}.${timestamp}${numberchar}"
+	local backupFilespec="${filespec}.${timestamp}${LETTERS[$i]}"
 	if [ -a "${backupFilespec}" ]; then
 	    # Current backup letter already exists.
 	    if [ "$isOnceToday" ]; then
@@ -203,7 +200,7 @@ getBackupFilename()
 	    fi
 
 	    # Try next backup letter.
-	    let number+=1
+	    let i+=1
 	    continue
 	fi
 	# Found unused backup letter.
