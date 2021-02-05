@@ -27,7 +27,7 @@ printShortUsage()
 {
     printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] FILE [...] [--help|-h|-?]'
     echo
-    printf 'Usage: sed -i"$(%q %s)" -e ... FILE\n' "$(basename "$1")" '[--once-today] --get-extension [--] FILE'
+    printf 'Usage: sed -i"$(%q %s)" -e ... FILE\n' "$(basename "$1")" '[--once-today] --get-extension [--accept-nonexisting] [--] FILE'
 }
 printUsage()
 {
@@ -73,6 +73,11 @@ HELPDESCRIPTION
 				current day was already made.
     --get-extension		Just print the backup extension (or nothing if
 				--once-today and a backup already exists).
+    --accept-nonexisting	Do not print an error if FILE does not exist,
+				but simply print the would-be backup extension.
+				Useful for direct-backup use cases where there's
+				either no original file or it is located
+				somewhere else.
 EXIT STATUS:
     0	Complete success.
     1	Failed to backup any file(s).
@@ -88,6 +93,7 @@ backupDir=
 isDeleteOriginal=
 isOnceToday=
 isOnlyPrintExtension=
+isAcceptNonexisting=
 while [ $# -ne 0 ]
 do
     case "$1" in
@@ -105,6 +111,7 @@ do
 	--delete-original)	shift; isDeleteOriginal=t;;
 	--once-today)		shift; isOnceToday=t;;
 	--get-extension)	shift; isOnlyPrintExtension=t;;
+	--accept-nonexisting)	shift; isAcceptNonexisting=t;;
 	--)			shift; break;;
 	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
 	*)			break;;
@@ -267,6 +274,9 @@ writebackup()
 	    rm --force --recursive -- "${spec}" || return 1
 	    printf 'Deleted original %s\n' "$spec"
 	fi
+    elif [ "$isOnlyPrintExtension" ] && [ "$isAcceptNonexisting" ]; then
+	local backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || return $?
+	[ "${backupFilespec}" ] && printf '%s\n' ".${backupFilespec##*.}"
     else
 	printf >&2 'ERROR: "%s" does not exist!\n' "$spec"
 	return 1
