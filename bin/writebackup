@@ -77,7 +77,11 @@ HELPDESCRIPTION
 				but simply print the would-be backup extension.
 				Useful for direct-backup use cases where there's
 				either no original file or it is located
-				somewhere else.
+				somewhere else. If you'd rather not create a
+				backup if FILE does not exist yet, just
+				suppress stderr and use the empty output (e.g.
+				with sed -i\$backupExtension) or react on the
+				exit status 1.
 EXIT STATUS:
     0	Complete success.
     1	Failed to backup any file(s).
