@@ -134,7 +134,7 @@ elif [ "$isOnlyPrintExtension" ] && [ "$isDeleteOriginal" ]; then
     echo
     printUsage "$0"
     exit 3
-elif [ "$backupDir" -a ! -d "${backupDir%/}" ]; then
+elif [ -n "$backupDir" -a ! -d "${backupDir%/}" ]; then
     printf 'ERROR: Backup dir does not exist: "%s"!\n' "${backupDir%/}"
     exit 3
 fi >&2
@@ -147,7 +147,7 @@ archiveAndBackup()
     local -r archiveDirBasename=$(basename -- "${dirspec}")
     local -r baseDirspec=$(dirname -- "${dirspec}")
     local status=0 backupFilespec
-    if [ "$backupDir" ]; then
+    if [ -n "$backupDir" ]; then
 	backupFilespec=$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")") || status=$?
     else
 	backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")") || status=$?
@@ -189,7 +189,7 @@ getBackupFilename()
 #   0 on success, 1 on failure
 ###############################################################################
 {
-    local -r filespec=$1
+    local -r filespec="$1"
 
     # Determine backup file name.
     local i=0
@@ -239,13 +239,13 @@ writebackup()
 	    return 1
 	fi
 
-	if [ "$backupDir" ]; then
+	if [ -n "$backupDir" ]; then
 	    local -r backupTemplate="${backupDir}$(basename -- "${spec}")"
 	else
-	    local -r backupTemplate=$spec
+	    local -r backupTemplate="$spec"
 	fi
-	local status=0 backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || status=$?
-	if [ "${backupFilespec}" ]; then
+	local status=0 backupFilespec; backupFilespec="$(getBackupFilename "${backupTemplate}")" || status=$?
+	if [ -n "${backupFilespec}" ]; then
 	    if [ "$isOnlyPrintExtension" ]; then
 		printf '%s\n' ".${backupFilespec##*.}"
 		return 0
@@ -277,7 +277,7 @@ writebackup()
 	fi
     elif [ "$isOnlyPrintExtension" ] && [ "$isAcceptNonexisting" ]; then
 	local backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || return $?
-	[ "${backupFilespec}" ] && printf '%s\n' ".${backupFilespec##*.}"
+	[ -n "${backupFilespec}" ] && printf '%s\n' ".${backupFilespec##*.}"
     else
 	printf >&2 'ERROR: "%s" does not exist!\n' "$spec"
 	return 1
