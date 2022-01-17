@@ -1,0 +1,29 @@
+#!/bin/bash
+
+: ${GREPNONBACKUPS_ADDITIONAL_EXTENSIONS=orig}
+typeset -a additionalExtensions=()
+[ -n "$GREPNONBACKUPS_ADDITIONAL_EXTENSIONS" ] && IFS='' read -r -a additionalExtensions <<<"${GREPNONBACKUPS_ADDITIONAL_EXTENSIONS// /}"
+
+: ${GREPNONBACKUPS_DIRS=\*.backup}
+typeset -a backupDirs=()
+[ -n "$GREPNONBACKUPS_DIRS" ] && IFS='' read -r -a backupDirs <<<"${GREPNONBACKUPS_DIRS// /}"
+
+printUsage()
+{
+    cat <<HELPTEXT
+grep that excludes backup files created by writebackup and optionally also with
+other file extensions${GREPNONBACKUPS_ADDITIONAL_EXTENSIONS:+ (}${GREPNONBACKUPS_ADDITIONAL_EXTENSIONS}${GREPNONBACKUPS_ADDITIONAL_EXTENSIONS:+)} and directories
+that just contain backups${GREPNONBACKUPS_DIRS:+ (}${GREPNONBACKUPS_DIRS}${GREPNONBACKUPS_DIRS:+)}, too.
+HELPTEXT
+    echo
+    printf 'Usage: [GREPNONBACKUPS_ADDITIONAL_EXTENSIONS="EXT1 EXT2 ..."] [GREPNONBACKUPS_DIRS="DIR1 DIR2 ..."] %q %s\n' "$(basename "$1")" '[GREP-OPTIONS ...] PATTERNS [FILE ...] [-?|-h|--help]'
+}
+case "$1" in
+    --help|-h|-\?)	shift; printUsage "$0"; exit 0;;
+esac
+
+exec grep \
+    --exclude='*.[12][0-9][0-9][0-9][0-9][0-9][0-9][0-9][a-z]' \
+    "${additionalExtensions[@]/#/--exclude=*.}" \
+    "${backupDirs[@]/#/--exclude-dir=}" \
+    "$@"
