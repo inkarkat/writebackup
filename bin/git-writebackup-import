@@ -225,6 +225,10 @@ if [ $# -ne 1 ]; then
     exit 2
 fi >&2
 readonly srcdir="${1%/}/"
+if [ ! -d "$srcdir" ]; then
+    printf >&2 'ERROR: Source directory does not exist: %s\n' "$srcdir"
+    exit 2
+fi
 
 git status >/dev/null || exit $?
 branch=$(git symbolic-ref HEAD)
