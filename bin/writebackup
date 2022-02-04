@@ -140,6 +140,12 @@ elif [ -n "$backupDir" -a ! -d "${backupDir%/}" ]; then
 fi >&2
 
 
+printBackupFile()
+{
+    local filespec="${1:?}"; shift
+    printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${filespec}")"
+}
+
 archiveAndBackup()
 {
     local -r dirspec=${1%/}
@@ -161,7 +167,7 @@ archiveAndBackup()
     printf 'Archiving %s...\n' "$dirspec"
     pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
     if [ $? -eq 0 ]; then
-	printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${backupFilespec}")"
+	printBackupFile "${backupFilespec}"
 	popd >/dev/null && return 0 || return 1
     else
 	echo >&2 'Could not create archive!'
@@ -253,7 +259,7 @@ writebackup()
 
 	    umask 0111	# Drop the execute permission on the backup.
 	    cp -- "${spec}" "${backupFilespec}" || return 1
-	    printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${backupFilespec}")"
+	    printBackupFile "${backupFilespec}"
 
 	    if [ "$isDeleteOriginal" ]; then
 		rm --force -- "${spec}" || return 1
