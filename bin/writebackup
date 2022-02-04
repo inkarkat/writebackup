@@ -165,7 +165,7 @@ archiveAndBackup()
     fi
 
     printf 'Archiving %s...\n' "$dirspec"
-    pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
+    pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"'
     if [ $? -eq 0 ]; then
 	printBackupFile "${backupFilespec}"
 	popd >/dev/null && return 0 || return 1
