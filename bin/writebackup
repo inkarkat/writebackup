@@ -178,7 +178,7 @@ archiveAndBackup()
     fi
     pushd "${baseDirspec}" >/dev/null && \
 	eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"' "$archiveRedirect" && {
-	    printBackupFile "${backupDir}$(basename -- "${backupFilespec}")"
+	    printBackupFile "${backupDir:-${baseDirspec}/}$(basename -- "${backupFilespec}")"
 	    popd >/dev/null || :
 	} || {
 	    echo >&2 'Could not create archive!'
