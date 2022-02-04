@@ -168,9 +168,14 @@ archiveAndBackup()
 	return 0
     fi
 
-    printf 'Archiving %s...\n' "$dirspec"
+    local archiveRedirect
+    if [ -t 1 ]; then
+	printf 'Archiving %s...\n' "$dirspec"
+    else
+	archiveRedirect='>/dev/null'
+    fi
     pushd "${baseDirspec}" >/dev/null && \
-	eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"' && {
+	eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"' "$archiveRedirect" && {
 	    printBackupFile "${backupDir}$(basename -- "${backupFilespec}")"
 	    popd >/dev/null || :
 	} || {
@@ -267,7 +272,7 @@ writebackup()
 
 	    if [ "$isDeleteOriginal" ]; then
 		rm --force -- "${spec}" || return 1
-		printf 'Deleted original %s\n' "$spec"
+		[ ! -t 1 ] || printf 'Deleted original %s\n' "$spec"
 	    fi
 
 	    return 0
@@ -283,7 +288,7 @@ writebackup()
 
 	if [ "$isDeleteOriginal" ]; then
 	    rm --force --recursive -- "${spec}" || return 1
-	    printf 'Deleted original %s\n' "$spec"
+	    [ ! -t 1 ] || printf 'Deleted original %s\n' "$spec"
 	fi
     elif [ "$isOnlyPrintExtension" ] && [ "$isAcceptNonexisting" ]; then
 	local backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || return $?
