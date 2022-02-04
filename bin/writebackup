@@ -25,7 +25,9 @@
 
 printShortUsage()
 {
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] FILE [...] [--help|-h|-?]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program "zip -9 -r" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] [--] FILE [...] [--help|-h|-?]'
+    echo
+    printf 'Usage: backupFilespec=$(%q %s)\n' "$(basename "$1")" '[...] [--] FILE [...]'
     echo
     printf 'Usage: sed -i"$(%q %s)" -e ... FILE\n' "$(basename "$1")" '--get-extension [--once-today] [--backup-dir|-d DIR] [--accept-nonexisting] [--] FILE'
 }
