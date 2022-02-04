@@ -143,7 +143,11 @@ fi >&2
 printBackupFile()
 {
     local filespec="${1:?}"; shift
-    printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${filespec}")"
+    # When output is not to the terminal, just print the complete backup
+    # filespec. Other applications may use command substitution to obtain
+    # it.
+    local message; [ -t 1 ] && message='Backed up to'
+    printf '%s%s\n' "${message}${message:+ }" "$filespec"
 }
 
 archiveAndBackup()
@@ -167,7 +171,7 @@ archiveAndBackup()
     printf 'Archiving %s...\n' "$dirspec"
     pushd "${baseDirspec}" >/dev/null && \
 	eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"' && {
-	    printBackupFile "${backupFilespec}"
+	    printBackupFile "${backupDir}$(basename -- "${backupFilespec}")"
 	    popd >/dev/null || :
 	} || {
 	    echo >&2 'Could not create archive!'
