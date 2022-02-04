@@ -165,15 +165,15 @@ archiveAndBackup()
     fi
 
     printf 'Archiving %s...\n' "$dirspec"
-    pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"'
-    if [ $? -eq 0 ]; then
-	printBackupFile "${backupFilespec}"
-	popd >/dev/null && return 0 || return 1
-    else
-	echo >&2 'Could not create archive!'
-	popd >/dev/null
-	return 1
-    fi
+    pushd "${baseDirspec}" >/dev/null && \
+	eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"' && {
+	    printBackupFile "${backupFilespec}"
+	    popd >/dev/null || :
+	} || {
+	    echo >&2 'Could not create archive!'
+	    popd >/dev/null || :
+	    return 1
+	}
 }
 
 typeset -ra LETTERS=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
