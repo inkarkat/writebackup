@@ -25,7 +25,9 @@
 
 printShortUsage()
 {
-    printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program \"zip -9 -r\" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] FILE [...] [--help|-h|-?]'
+    printf 'Usage: %q %s\n' "$(basename "$1")" '[--archive-program "zip -9 -r" --archive-extension .zip] [--backup-dir|-d DIR] [--delete-original] [--once-today] [--] FILE [...] [--help|-h|-?]'
+    echo
+    printf 'Usage: backupFilespec=$(%q %s)\n' "$(basename "$1")" '[...] [--] FILE [...]'
     echo
     printf 'Usage: sed -i"$(%q %s)" -e ... FILE\n' "$(basename "$1")" '--get-extension [--once-today] [--backup-dir|-d DIR] [--accept-nonexisting] [--] FILE'
 }
@@ -140,6 +142,16 @@ elif [ -n "$backupDir" -a ! -d "${backupDir%/}" ]; then
 fi >&2
 
 
+printBackupFile()
+{
+    local filespec="${1:?}"; shift
+    # When output is not to the terminal, just print the complete backup
+    # filespec. Other applications may use command substitution to obtain
+    # it.
+    local message; [ -t 1 ] && message='Backed up to'
+    printf '%s%s\n' "${message}${message:+ }" "$filespec"
+}
+
 archiveAndBackup()
 {
     local -r dirspec=${1%/}
@@ -158,16 +170,21 @@ archiveAndBackup()
 	return 0
     fi
 
-    printf 'Archiving %s...\n' "$dirspec"
-    pushd "${baseDirspec}" >/dev/null && eval "${archiveProgram}" \"${backupFilespec}\" \"${archiveDirBasename}/\"
-    if [ $? -eq 0 ]; then
-	printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${backupFilespec}")"
-	popd >/dev/null && return 0 || return 1
+    local archiveRedirect
+    if [ -t 1 ]; then
+	printf 'Archiving %s...\n' "$dirspec"
     else
-	echo >&2 'Could not create archive!'
-	popd >/dev/null
-	return 1
+	archiveRedirect='>/dev/null'
     fi
+    pushd "${baseDirspec}" >/dev/null && \
+	eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"' "$archiveRedirect" && {
+	    printBackupFile "${backupDir:-${baseDirspec}/}$(basename -- "${backupFilespec}")"
+	    popd >/dev/null || :
+	} || {
+	    echo >&2 'Could not create archive!'
+	    popd >/dev/null || :
+	    return 1
+	}
 }
 
 typeset -ra LETTERS=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
@@ -253,11 +270,11 @@ writebackup()
 
 	    umask 0111	# Drop the execute permission on the backup.
 	    cp -- "${spec}" "${backupFilespec}" || return 1
-	    printf 'Backed up to %s%s\n' "$backupDir" "$(basename -- "${backupFilespec}")"
+	    printBackupFile "${backupFilespec}"
 
 	    if [ "$isDeleteOriginal" ]; then
 		rm --force -- "${spec}" || return 1
-		printf 'Deleted original %s\n' "$spec"
+		[ ! -t 1 ] || printf 'Deleted original %s\n' "$spec"
 	    fi
 
 	    return 0
@@ -273,7 +290,7 @@ writebackup()
 
 	if [ "$isDeleteOriginal" ]; then
 	    rm --force --recursive -- "${spec}" || return 1
-	    printf 'Deleted original %s\n' "$spec"
+	    [ ! -t 1 ] || printf 'Deleted original %s\n' "$spec"
 	fi
     elif [ "$isOnlyPrintExtension" ] && [ "$isAcceptNonexisting" ]; then
 	local backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || return $?
