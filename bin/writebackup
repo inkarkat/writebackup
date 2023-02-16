@@ -88,8 +88,9 @@ EXIT STATUS:
     0	Complete success.
     1	Failed to backup any FILE(s).
     $WRITEBACKUP_ALREADY_TODAY_EXIT_STATUS	A backup was made already today and --once-today is given.
-    2	Partial success; some FILE(s) could not be backed up.
-    3	Bad invocation, wrong or missing command-line arguments.
+    2   Bad invocation, wrong or missing command-line arguments
+    3	Internal error or failed assertion.
+    6	Partial success; some FILE(s) could not be backed up.
 HELPTEXT
 }
 
@@ -108,7 +109,7 @@ do
 	--archive-extension)	shift; archiveExtension="$1"; shift;;
 	--backup-dir|-d)	if [ -z "$2" ]; then
 				    { echo "ERROR: Must pass directory after ${1}!"; echo; printUsage "$0"; } >&2
-				    exit 3
+				    exit 2
 				fi
 				shift
 				backupDir="${1%/}/"
@@ -119,27 +120,27 @@ do
 	--get-extension)	shift; isOnlyPrintExtension=t;;
 	--accept-nonexisting)	shift; isAcceptNonexisting=t;;
 	--)			shift; break;;
-	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 3;;
+	-*)			{ echo "ERROR: Unknown option \"${1}\"!"; echo; printUsage "$0"; } >&2; exit 2;;
 	*)			break;;
     esac
 done
 if [ $# -eq 0 ]; then
     printUsage "$0"
-    exit 3
+    exit 2
 elif [ "$isOnlyPrintExtension" ] && [ $# -ne 1 ]; then
     echo 'ERROR: Only a single FILE can be passed with --get-extension.'
     echo
     printUsage "$0"
-    exit 3
+    exit 2
 elif [ "$isOnlyPrintExtension" ] && [ "$isDeleteOriginal" ]; then
     echo 'ERROR: Cannot combine --get-extension and --delete-original.'
     echo
     printUsage "$0"
-    exit 3
+    exit 2
 elif [ -n "$backupDir" -a ! -d "$backupDir" ]; then
     backupDir="${backupDir%/}"
     printf 'ERROR: Backup dir does not exist: %s\n' "${backupDir:-/}"
-    exit 3
+    exit 2
 fi >&2
 
 
@@ -315,5 +316,5 @@ do
 done
 
 if [ "$isFailure" ]; then
-    [ "$isSuccess" ] && exit 2 || exit 1
+    [ "$isSuccess" ] && exit 6 || exit 1
 fi
