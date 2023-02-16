@@ -156,15 +156,15 @@ printBackupFile()
 
 archiveAndBackup()
 {
-    local -r dirspec=${1%/}
+    local -r dirspec="${1%/}"
 
-    local -r archiveDirBasename=$(basename -- "${dirspec}")
-    local -r baseDirspec=$(dirname -- "${dirspec}")
+    local -r archiveDirBasename="$(basename -- "$dirspec")"
+    local -r baseDirspec="$(dirname -- "$dirspec")"
     local status=0 backupFilespec
     if [ -n "$backupDir" ]; then
-	backupFilespec=$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")") || status=$?
+	backupFilespec="$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")") || status=$?"
     else
-	backupFilespec=$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")") || status=$?
+	backupFilespec="$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")" || status=$?
     fi
     [ "$backupFilespec" ] || return $status
     if [ "$isOnlyPrintExtension" ]; then
@@ -178,9 +178,9 @@ archiveAndBackup()
     else
 	archiveRedirect='>/dev/null'
     fi
-    pushd "${baseDirspec}" >/dev/null && \
-	eval "${archiveProgram}" '"${backupFilespec}" "${archiveDirBasename}/"' "$archiveRedirect" && {
-	    printBackupFile "${backupDir:-${baseDirspec}/}$(basename -- "${backupFilespec}")"
+    pushd "$baseDirspec" >/dev/null && \
+	eval "$archiveProgram" '"$backupFilespec" "$archiveDirBasename/"' "$archiveRedirect" && {
+	    printBackupFile "${backupDir:-${baseDirspec}/}$(basename -- "$backupFilespec")"
 	    popd >/dev/null || :
 	} || {
 	    echo >&2 'ERROR: Could not create archive.'
@@ -215,7 +215,7 @@ getBackupFilename()
     while [ $i -lt ${#LETTERS[@]} ]
     do
 	local backupFilespec="${filespec}.${timestamp}${LETTERS[$i]}"
-	if [ -a "${backupFilespec}" ]; then
+	if [ -a "$backupFilespec" ]; then
 	    # Current backup letter already exists.
 	    if [ "$isOnceToday" ]; then
 		# A backup for today already exists; don't do another one.
@@ -250,32 +250,32 @@ writebackup()
 #   0 on success, 1 on failure
 ###############################################################################
 {
-    local -r spec=$1
+    local -r spec="$1"
 
-    if [ -f "${spec}" ]; then
-	if [ ! -r "${spec}" ]; then
+    if [ -f "$spec" ]; then
+	if [ ! -r "$spec" ]; then
 	    printf >&2 "ERROR: '%s' is not readable.\n" "$spec"
 	    return 1
 	fi
 
 	if [ -n "$backupDir" ]; then
-	    local -r backupTemplate="${backupDir}$(basename -- "${spec}")"
+	    local -r backupTemplate="${backupDir}$(basename -- "$spec")"
 	else
 	    local -r backupTemplate="$spec"
 	fi
-	local status=0 backupFilespec; backupFilespec="$(getBackupFilename "${backupTemplate}")" || status=$?
-	if [ -n "${backupFilespec}" ]; then
+	local status=0 backupFilespec; backupFilespec="$(getBackupFilename "$backupTemplate")" || status=$?
+	if [ -n "$backupFilespec" ]; then
 	    if [ "$isOnlyPrintExtension" ]; then
 		printf '%s\n' ".${backupFilespec##*.}"
 		return 0
 	    fi
 
 	    umask 0111	# Drop the execute permission on the backup.
-	    cp -- "${spec}" "${backupFilespec}" || return 1
-	    printBackupFile "${backupFilespec}"
+	    cp -- "$spec" "$backupFilespec" || return 1
+	    printBackupFile "$backupFilespec"
 
 	    if [ "$isDeleteOriginal" ]; then
-		rm --force -- "${spec}" || return 1
+		rm --force -- "$spec" || return 1
 		[ ! -t 1 ] || printf 'Deleted original %s\n' "$spec"
 	    fi
 
@@ -283,20 +283,20 @@ writebackup()
 	else
 	    return $status
 	fi
-    elif [ -d "${spec}" ]; then
-	if [ ! -r "${spec}" -o ! -x "${spec}" ]; then
+    elif [ -d "$spec" ]; then
+	if [ ! -r "$spec" -o ! -x "$spec" ]; then
 	    printf >&2 "ERROR: '%s' is not accessible.\\n" "$spec"
 	    return 1
 	fi
-	archiveAndBackup "${spec}" || return 1
+	archiveAndBackup "$spec" || return 1
 
 	if [ "$isDeleteOriginal" ]; then
-	    rm --force --recursive -- "${spec}" || return 1
+	    rm --force --recursive -- "$spec" || return 1
 	    [ ! -t 1 ] || printf 'Deleted original %s\n' "$spec"
 	fi
     elif [ "$isOnlyPrintExtension" ] && [ "$isAcceptNonexisting" ]; then
-	local backupFilespec; backupFilespec=$(getBackupFilename "${backupTemplate}") || return $?
-	[ -n "${backupFilespec}" ] && printf '%s\n' ".${backupFilespec##*.}"
+	local backupFilespec; backupFilespec="$(getBackupFilename "$backupTemplate")" || return $?
+	[ -n "$backupFilespec" ] && printf '%s\n' ".${backupFilespec##*.}"
     else
 	printf >&2 "ERROR: '%s' does not exist.\\n" "$spec"
 	return 1
@@ -305,7 +305,7 @@ writebackup()
 
 
 DATE=date; type -t >/dev/null humanDayDate && DATE=humanDayDate
-readonly timestamp=$($DATE +%Y%m%d)
+readonly timestamp="$($DATE +%Y%m%d)"
 isSuccess=
 isFailure=
 
