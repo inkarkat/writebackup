@@ -178,15 +178,16 @@ archiveAndBackup()
     else
 	archiveRedirect='>/dev/null'
     fi
-    pushd "$baseDirspec" >/dev/null && \
-	eval "$archiveProgram" '"$backupFilespec" "$archiveDirBasename/"' "$archiveRedirect" && {
+
+    (
+	cd "${baseDirspec}" || exit 1
+	if eval "$archiveProgram" '"$backupFilespec" "$archiveDirBasename/"' "$archiveRedirect"; then
 	    printBackupFile "${backupDir:-${baseDirspec}/}$(basename -- "$backupFilespec")"
-	    popd >/dev/null || :
-	} || {
-	    echo >&2 'ERROR: Could not create archive.'
-	    popd >/dev/null || :
-	    return 1
-	}
+	else
+	    printf >&2 'ERROR: Could not create archive: %s\n' "${backupDir:-${baseDirspec}/}$(basename -- "$backupFilespec")"
+	    exit 1
+	fi
+    )
 }
 
 typeset -ra LETTERS=(a b c d e f g h i j k l m n o p q r s t u v w x y z)
