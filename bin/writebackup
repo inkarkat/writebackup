@@ -162,7 +162,7 @@ archiveAndBackup()
     local -r baseDirspec="$(dirname -- "$dirspec")"
     local status=0 backupFilespec
     if [ -n "$backupDir" ]; then
-	backupFilespec="$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")") || status=$?"
+	backupFilespec="$(readlink -nf -- "$(getBackupFilename "${backupDir}${archiveDirBasename}${archiveExtension}")")" || status=$?
     else
 	backupFilespec="$(basename -- "$(getBackupFilename "${dirspec}${archiveExtension}")")" || status=$?
     fi
